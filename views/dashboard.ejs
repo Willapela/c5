@@ -378,11 +378,11 @@
                         <div v-if="modal.type === 'Servers' && config.Servers[modal.index]">
                             <div class="form-group">
                                 <label>Modo de conexão</label>
-                                <select v-model="config.Servers[modal.index].Mode">
+                                <select v-model="config.Servers[modal.index].Info">
                                     <option v-for="mode in connectionModes" :key="mode" :value="mode">{{ mode }}</option>
                                 </select>
                                 <div class="text-muted" style="margin-top: .5rem; line-height: 1.45;">
-                                    {{ modeDescriptions[config.Servers[modal.index].Mode] }}
+                                    {{ modeDescriptions[config.Servers[modal.index].Info] }}
                                 </div>
                             </div>
                             <div class="form-group grid-col-2">
@@ -437,11 +437,11 @@
                                 <label>URL Check User</label>
                                 <input type="text" v-model="config.Servers[modal.index].CheckUser">
                             </div>
-                            <div v-if="['SSH_PROXY','SSL_DIRECT','SSL_PROXY'].includes(config.Servers[modal.index].Mode)" class="form-group">
+                            <div v-if="['Direct','Proxy','Ssl','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group">
                                 <label>Payload ([lf] para quebra de linha; # para múltiplos)</label>
                                 <textarea v-model="config.Servers[modal.index].Payload" placeholder="GET / HTTP/1.1[lf]Host: exemplo.com[lf][lf]"></textarea>
                             </div>
-                            <div v-if="['SSH_PROXY','SSL_PROXY','OVPN_PROXY','OVPN_SSL_PROXY'].includes(config.Servers[modal.index].Mode)" class="form-group grid-col-2">
+                            <div v-if="['Proxy','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
                                 <div>
                                     <label>IP/Host do Proxy (# para múltiplos)</label>
                                     <input type="text" v-model="config.Servers[modal.index].ProxyIP">
@@ -451,7 +451,7 @@
                                     <input type="text" v-model="config.Servers[modal.index].ProxyPort">
                                 </div>
                             </div>
-                            <div v-if="['SSL_DIRECT','SSL_PROXY','OVPN_SSL','OVPN_SSL_PROXY','V2RAY'].includes(config.Servers[modal.index].Mode)" class="form-group grid-col-2">
+                            <div v-if="['Ssl','Tlsws','XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
                                 <div>
                                     <label>SNI / Bug Host</label>
                                     <input type="text" v-model="config.Servers[modal.index].SNI">
@@ -471,7 +471,7 @@
                                     <input type="text" v-model="config.Servers[modal.index].ColorDescription" placeholder="#ffffff">
                                 </div>
                             </div>
-                            <div v-if="['SSH_DNSTT','HYSTERIA'].includes(config.Servers[modal.index].Mode)" class="form-group grid-col-2">
+                            <div v-if="['XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
                                 <div>
                                     <label>DNS 1</label>
                                     <input type="text" v-model="config.Servers[modal.index].DNS1">
@@ -481,11 +481,11 @@
                                     <input type="text" v-model="config.Servers[modal.index].DNS2">
                                 </div>
                             </div>
-                            <div v-if="['SSH_DNSTT','HYSTERIA'].includes(config.Servers[modal.index].Mode)" class="form-group">
+                            <div v-if="['XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group">
                                 <label>Portas UDP</label>
                                 <input type="text" v-model="config.Servers[modal.index].UDPPorts" placeholder="7300">
                             </div>
-                            <div v-if="['SSH_DIRECT','SSH_PROXY','SSH_DNSTT','SSL_DIRECT','SSL_PROXY'].includes(config.Servers[modal.index].Mode)" class="form-group grid-col-2">
+                            <div v-if="['Ssl','Direct','Proxy','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
                                 <div>
                                     <label>Nome de usuário</label>
                                     <input type="text" v-model="config.Servers[modal.index].USER">
@@ -495,7 +495,7 @@
                                     <input type="password" v-model="config.Servers[modal.index].PASS">
                                 </div>
                             </div>
-                            <div v-if="['SSL_DIRECT','SSL_PROXY','OVPN_SSL','OVPN_SSL_PROXY'].includes(config.Servers[modal.index].Mode)" class="form-group">
+                            <div v-if="['Ssl','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group">
                                 <label>Versão TLS</label>
                                 <select v-model="config.Servers[modal.index].TLSVersion">
                                     <option value="TLSv1.3">TLSv1.3</option>
@@ -503,17 +503,17 @@
                                     <option value="TLSv1.1">TLSv1.1</option>
                                 </select>
                             </div>
-                            <div v-if="config.Servers[modal.index].Mode === 'OVPN_PROXY' || config.Servers[modal.index].Mode === 'OVPN_SSL' || config.Servers[modal.index].Mode === 'OVPN_SSL_PROXY'" class="form-group">
+                            <div v-if="false" class="form-group">
                                 <label>Configuração OpenVPN</label>
                                 <textarea v-model="config.Servers[modal.index].OpenVPNConfig" placeholder="Cole a configuração OpenVPN"></textarea>
                             </div>
-                            <div v-if="config.Servers[modal.index].Mode === 'V2RAY'" class="form-group">
+                            <div v-if="false" class="form-group">
                                 <label>Configuração V2Ray</label>
                                 <textarea v-model="config.Servers[modal.index].V2RayConfig" placeholder="Cole a configuração V2Ray"></textarea>
                                 <label style="margin-top: .75rem;">UUID V2Ray</label>
                                 <input type="text" v-model="config.Servers[modal.index].UUID">
                             </div>
-                            <div v-if="config.Servers[modal.index].Mode === 'SSH_DNSTT'" class="form-group grid-col-2">
+                            <div v-if="false" class="form-group grid-col-2">
                                 <div>
                                     <label>Chave DNS.TT</label>
                                     <input type="text" v-model="config.Servers[modal.index].DNSTTKey">
@@ -527,7 +527,7 @@
                                     <input type="text" v-model="config.Servers[modal.index].DNSTTServer">
                                 </div>
                             </div>
-                            <div v-if="config.Servers[modal.index].Mode === 'HYSTERIA'" class="form-group grid-col-2">
+                            <div v-if="false" class="form-group grid-col-2">
                                 <div>
                                     <label>Porta Hysteria</label>
                                     <input type="text" v-model="config.Servers[modal.index].HyPort">
@@ -582,7 +582,7 @@
 
                 // Compatibilidade: adiciona os campos do ConnectPlus aos servidores antigos.
                 const serverDefaults = {
-                    Mode: 'SSH_DIRECT', Category: '', Info: 'Tlsws',
+                    Mode: 'Direct', Category: '', Info: 'Direct',
                     Description: '', ColorName: '#ffffff',
                     ColorDescription: '#ffffff', Color: '#0000ff', Payload: '',
                     ProxyIP: '', ProxyPort: '443', SNI: '', Path: '',
@@ -625,22 +625,14 @@
                 return {
                     activeMenu: localStorage.getItem('activeMenu') || 'dashboard',
                     connectionModes: [
-                        'SSH_DIRECT', 'SSH_PROXY', 'SSH_DNSTT',
-                        'SSL_DIRECT', 'SSL_PROXY',
-                        'OVPN_PROXY', 'OVPN_SSL', 'OVPN_SSL_PROXY',
-                        'V2RAY', 'HYSTERIA'
+                        'Ssl', 'Direct', 'Proxy', 'Tlsws', 'XHTTP'
                     ],
                     modeDescriptions: {
-                        SSH_DIRECT: 'SSH direto: conecta diretamente ao servidor SSH, sem proxy HTTP.',
-                        SSH_PROXY: 'SSH com proxy: use proxy, payload e SNI quando a rede exigir um intermediário.',
-                        SSH_DNSTT: 'SSH via DNS.TT: exige chave DNS.TT, nameserver e servidor DNS.TT.',
-                        SSL_DIRECT: 'SSL direto: usa TLS no servidor, com SNI e versão TLS.',
-                        SSL_PROXY: 'SSL com proxy: combina TLS, SNI, payload e proxy HTTP.',
-                        OVPN_PROXY: 'OpenVPN com proxy: informe o arquivo de configuração OpenVPN e os dados do proxy.',
-                        OVPN_SSL: 'OpenVPN sobre SSL: informe o arquivo OpenVPN e os parâmetros TLS.',
-                        OVPN_SSL_PROXY: 'OpenVPN sobre SSL e proxy: combina configuração OpenVPN, TLS e proxy.',
-                        V2RAY: 'V2Ray: informe a configuração V2Ray e, se necessário, o UUID.',
-                        HYSTERIA: 'Hysteria: informe porta, obfs e limites de upload/download.'
+                        Ssl: 'SSL direto: o app usa ServerIP, ServerPort e SNI, sem proxy personalizado.',
+                        Direct: 'Direct: conexão direta; o app usa ServerIP, ServerPort e Payload.',
+                        Proxy: 'Proxy: o app usa ServerIP, ServerPort, ProxyIP, ProxyPort e Payload.',
+                        Tlsws: 'Tlsws: o app usa servidor, porta, proxy, payload e SNI.',
+                        XHTTP: 'XHTTP: o app usa servidor, porta, proxy, SNI e Path. O padrão de Path é /ssh.'
                     },
                     config: initialConfig,
                     modal: {
@@ -707,7 +699,7 @@
                     this.config.Servers.push({
                         Name: "Nova Configuração",
                         TYPE: "premium",
-                        Mode: "SSH_DIRECT",
+                        Mode: "Direct",
                         Category: "",
                         Info: "Tlsws",
                         Description: "",
