@@ -193,64 +193,21 @@
                 </div>
                 
                 <div class="glass-container config-card">
-                    <h3 class="section-title" style="margin-top:0;">Tema do aplicativo ConnectPlus</h3>
-                    <p class="text-muted">Esses campos são entregues pela URL do tema e seguem o formato lido pelo aplicativo.</p>
+                    <h3 class="section-title" style="margin-top:0;">Tema do aplicativo</h3>
+                    <p class="text-muted">Tema mínimo do aplicativo ConnectPlus.</p>
                     <div class="card-grid">
                         <div class="form-group">
                             <label>Nome do aplicativo</label>
-                            <input type="text" v-model="config.Theme.AppName">
+                            <input type="text" v-model="config.Theme.AppName" value="ConnectPlus" readonly style="background-color: rgba(255,255,255,0.05); color: #888; cursor: not-allowed;">
                         </div>
                         <div class="form-group">
                             <label>Versão do tema</label>
                             <input type="text" v-model="config.Theme.Version">
                         </div>
                         <div class="form-group">
-                            <label>Imagem de fundo</label>
-                            <input type="url" v-model="config.Theme.ImgFundo">
-                        </div>
-                        <div class="form-group">
-                            <label>Logo</label>
-                            <input type="url" v-model="config.Theme.ImgLogo">
-                        </div>
-                        <div class="form-group">
-                            <label>Banner</label>
-                            <input type="url" v-model="config.Theme.ImgBanner">
-                        </div>
-                        <div class="form-group">
-                            <label>Imagem do menu</label>
-                            <input type="url" v-model="config.Theme.ImgMenu">
-                        </div>
-                        <div class="form-group">
-                            <label>Imagem dos logs</label>
-                            <input type="url" v-model="config.Theme.ImgLogs">
-                        </div>
-                        <div class="form-group">
-                            <label>Imagem de check</label>
-                            <input type="url" v-model="config.Theme.ImgCheck">
-                        </div>
-                        <div class="form-group">
-                            <label>Imagem do usuário</label>
-                            <input type="url" v-model="config.Theme.ImgUser">
-                        </div>
-                        <div class="form-group">
-                            <label>Imagem da senha</label>
-                            <input type="url" v-model="config.Theme.ImgPass">
-                        </div>
-                        <div class="form-group">
-                            <label>Imagem de atualização</label>
-                            <input type="url" v-model="config.Theme.ImgUpdate">
-                        </div>
-                        <div class="form-group">
                             <label>URL do tema</label>
                             <input type="text" v-model="config.Theme.Update" readonly style="background-color: rgba(255,255,255,0.05); color: #888; cursor: not-allowed;">
                         </div>
-                    </div>
-                    <div class="card-grid">
-                        <div class="form-group"><label>ColorOne</label><input type="text" v-model="config.Theme.ColorOne"></div>
-                        <div class="form-group"><label>ColorTwo</label><input type="text" v-model="config.Theme.ColorTwo"></div>
-                        <div class="form-group"><label>ColorStarter</label><input type="text" v-model="config.Theme.ColorStarter"></div>
-                        <div class="form-group"><label>ColorDialogs</label><input type="text" v-model="config.Theme.ColorDialogs"></div>
-                        <div class="form-group"><label>ColorButtons</label><input type="text" v-model="config.Theme.ColorButtons"></div>
                     </div>
 
                     <h3 class="section-title">Imagens e Fundos</h3>
@@ -664,11 +621,13 @@
                 initialConfig.UrlUpdate = appUrl;
                 initialConfig.Update = appUrl;
                 initialConfig.Theme = Object.assign({
-                    Version: '1', Update: '', AppName: 'ConnectPlus', ImgFundo: '', ImgLogo: '', ImgBanner: '',
-                    ImgMenu: '', ImgLogs: '', ImgCheck: '', ImgUser: '', ImgPass: '', ColorOne: '#7A333333',
-                    ColorTwo: '#7A333333', ColorStarter: '#7A333333', ColorDialogs: '#84ffffff',
-                    ColorButtons: '#333333', ImgUpdate: ''
+                    Version: '1', Update: '', AppName: 'ConnectPlus'
                 }, initialConfig.Theme || {});
+                initialConfig.Theme = {
+                    Version: initialConfig.Theme.Version || '1',
+                    Update: initialConfig.Theme.Update || '',
+                    AppName: 'ConnectPlus'
+                };
                 
                 // Initialize text layout keys
                 const stringKeys = ['logoonline', 'fundoonline', 'banneRodapeOnline', 'fundoDoLogOnline', 'EmailFeedback', 'UrlContato', 'UrlTermos', 'ModderLinkWhatsapp', 'ModderLinkTelegram'];

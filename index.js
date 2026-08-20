@@ -126,21 +126,7 @@ const DEFAULT_CONFIG = {
     "Theme": {
         "Version": "1",
         "Update": "",
-        "AppName": "ConnectPlus",
-        "ImgFundo": "",
-        "ImgLogo": "",
-        "ImgBanner": "",
-        "ImgMenu": "",
-        "ImgLogs": "",
-        "ImgCheck": "",
-        "ImgUser": "",
-        "ImgPass": "",
-        "ColorOne": "#7A333333",
-        "ColorTwo": "#7A333333",
-        "ColorStarter": "#7A333333",
-        "ColorDialogs": "#84ffffff",
-        "ColorButtons": "#333333",
-        "ImgUpdate": ""
+        "AppName": "ConnectPlus"
     },
     "logoonline": "https://i.ibb.co/1GFWft65/ic-banner.png",
     "fundoonline": "https://i.ibb.co/Pz189Nvw/77bb3128f92f68bbf7e4e38156078416.jpg",
@@ -337,9 +323,12 @@ app.get('/:username/theme', (req, res) => {
     const user = getUser(username);
     if (!user) return res.status(404).send('Not Found');
     const config = parseUserConfig(user);
-    const theme = (config.Theme && typeof config.Theme === 'object') ? { ...config.Theme } : {};
-    theme.Version = String(theme.Version ?? config.Version ?? 1);
-    theme.Update = `${requestBaseUrl(req)}/${encodeURIComponent(username)}/theme`;
+    const savedTheme = (config.Theme && typeof config.Theme === 'object') ? config.Theme : {};
+    const theme = {
+        Version: String(savedTheme.Version ?? config.Version ?? 1),
+        Update: `${requestBaseUrl(req)}/${encodeURIComponent(username)}/theme`,
+        AppName: 'ConnectPlus'
+    };
     res.type('application/json').send(theme);
 });
 
