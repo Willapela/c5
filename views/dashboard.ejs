@@ -331,7 +331,7 @@
                     <div class="list-item" v-for="(srv, index) in config.Servers" :key="index" @click="editItem('Servers', index)">
                         <div class="list-item-content">
                             <div class="list-item-title">{{ srv.Name || 'Servidor Sem Nome' }}</div>
-                            <div class="list-item-subtitle">{{ srv.ServerIP }} : {{ srv.ServerPort }} &nbsp;|&nbsp; {{ srv.TYPE }}</div>
+                            <div class="list-item-subtitle">{{ srv.ServerIP }} : {{ srv.ServerPort }} &nbsp;|&nbsp; {{ srv.Info || srv.TYPE || 'Sem modo' }}</div>
                         </div>
                         <div class="list-item-actions">
                             <button class="action-icon-btn danger" @click.stop="removeServer(index)" title="Excluir">✖</button>
@@ -417,12 +417,54 @@
                             </div>
                             <div class="form-group grid-col-2">
                                 <div>
-                                    <label>Tipo (Ex: premium)</label>
+                                    <label>Tipo legado (TYPE)</label>
                                     <input type="text" v-model="config.Servers[modal.index].TYPE">
                                 </div>
                                 <div>
-                                    <label>URL Check User</label>
-                                    <input type="text" v-model="config.Servers[modal.index].CheckUser">
+                                    <label>Modo / Info</label>
+                                    <input type="text" v-model="config.Servers[modal.index].Info" placeholder="Tlsws, XHTTP, SSH...">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Descrição</label>
+                                <input type="text" v-model="config.Servers[modal.index].Description">
+                            </div>
+                            <div class="form-group">
+                                <label>URL Check User</label>
+                                <input type="text" v-model="config.Servers[modal.index].CheckUser">
+                            </div>
+                            <div class="form-group">
+                                <label>Payload ([lf] para quebra de linha; # para múltiplos)</label>
+                                <textarea v-model="config.Servers[modal.index].Payload" placeholder="GET / HTTP/1.1[lf]Host: exemplo.com[lf][lf]"></textarea>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>IP/Host do Proxy (# para múltiplos)</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ProxyIP">
+                                </div>
+                                <div>
+                                    <label>Porta do Proxy</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ProxyPort">
+                                </div>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>SNI / Bug Host</label>
+                                    <input type="text" v-model="config.Servers[modal.index].SNI">
+                                </div>
+                                <div>
+                                    <label>Path</label>
+                                    <input type="text" v-model="config.Servers[modal.index].Path" placeholder="/ssh">
+                                </div>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>Cor do nome</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ColorName" placeholder="#ffffff">
+                                </div>
+                                <div>
+                                    <label>Cor da descrição</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ColorDescription" placeholder="#ffffff">
                                 </div>
                             </div>
                         </div>
@@ -490,6 +532,17 @@
             data() {
                 if (!initialConfig.Networks) initialConfig.Networks = [];
                 if (!initialConfig.Servers) initialConfig.Servers = [];
+
+                // Compatibilidade: adiciona os campos do ConnectPlus aos servidores antigos.
+                const serverDefaults = {
+                    Info: 'Tlsws', Description: '', ColorName: '#ffffff',
+                    ColorDescription: '#ffffff', Color: '#0000ff', Payload: '',
+                    ProxyIP: '', ProxyPort: '443', SNI: '', Path: ''
+                };
+                initialConfig.Servers = initialConfig.Servers.map(server => Object.assign(
+                    {}, serverDefaults, server,
+                    { Info: server.Info || server.TYPE || serverDefaults.Info }
+                ));
                 
                 // Force UrlUpdate to always be the user's unique config URL
                 initialConfig.UrlUpdate = appUrl;
@@ -582,13 +635,23 @@
                     this.config.Servers.push({
                         Name: "Novo Servidor",
                         TYPE: "premium",
+                        Info: "Tlsws",
+                        Description: "",
+                        ColorName: "#ffffff",
+                        ColorDescription: "#ffffff",
+                        Color: "#0000ff",
                         FLAG: "br.png",
                         ServerIP: "0.0.0.0",
                         CheckUser: "http://",
-                        ServerPort: "22",
+                        ServerPort: "443",
                         SSLPort: "443",
                         USER: "",
-                        PASS: ""
+                        PASS: "",
+                        Payload: "",
+                        ProxyIP: "",
+                        ProxyPort: "443",
+                        SNI: "",
+                        Path: ""
                     });
                     this.editItem('Servers', this.config.Servers.length - 1);
                 },

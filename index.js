@@ -115,13 +115,23 @@ const DEFAULT_CONFIG = {
         {
             "Name": "Servidor Br 1",
             "TYPE": "free",
+            "Info": "Tlsws",
+            "Description": "",
+            "ColorName": "#ffffff",
+            "ColorDescription": "#ffffff",
+            "Color": "#0000ff",
             "FLAG": "br.png",
             "ServerIP": "br1.beto02.shop",
             "CheckUser": "http://",
-            "ServerPort": "22",
+            "ServerPort": "443",
             "SSLPort": "443",
             "USER": "",
-            "PASS": ""
+            "PASS": "",
+            "Payload": "",
+            "ProxyIP": "",
+            "ProxyPort": "443",
+            "SNI": "",
+            "Path": ""
         }
     ]
 };
