@@ -77,6 +77,9 @@
                 <div class="nav-item" :class="{active: activeMenu === 'servers'}" @click="setMenu('servers')">
                     <span class="nav-icon" aria-hidden="true">🖥️</span><span>Servidores</span>
                 </div>
+                <div class="nav-item" :class="{active: activeMenu === 'cdn'}" @click="setMenu('cdn')">
+                    <span class="nav-icon" aria-hidden="true">🌐</span><span>Pool CDN</span>
+                </div>
                 <div class="nav-item" :class="{active: activeMenu === 'raw'}" @click="setMenu('raw')">
                     <span class="nav-icon" aria-hidden="true">📝</span><span>Editor JSON Bruto</span>
                 </div>
@@ -168,6 +171,38 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- CDN Pool Section -->
+            <div v-show="activeMenu === 'cdn'">
+                <div class="page-header">
+                    <div class="eyebrow">TESTE DE DISPONIBILIDADE</div><h1 class="page-title">Pool CDN</h1>
+                    <p class="text-muted">Teste domínios e URLs da CDN antes de usar no ProxyIP ou XHTTP.</p>
+                </div>
+                <div class="glass-container config-card">
+                    <div class="form-group">
+                        <label>Links ou domínios</label>
+                        <textarea v-model="cdnInput" rows="5" placeholder="oc3xhkzwdcw.map.azionedge.net\nhttps://exemplo.com/cdn"></textarea>
+                        <small class="text-muted">Informe um por linha ou separados por vírgula. Serão testados no máximo 100 links.</small>
+                    </div>
+                    <div class="card-grid form-grid-2">
+                        <button class="btn secondary" @click="saveCdnPool">💾 Salvar pool</button>
+                        <button class="btn primary" @click="testCdnPool" :disabled="cdnTesting">{{ cdnTesting ? 'Testando...' : '⚡ Testar links' }}</button>
+                    </div>
+                </div>
+                <div v-if="cdnResults.length" class="glass-container config-card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+                        <div><h3 class="section-title" style="margin-top:0;">Resultado dos testes</h3><p class="text-muted">{{ cdnActive.length }} link(s) ativo(s) de {{ cdnResults.length }}.</p></div>
+                        <button class="btn secondary small" @click="copyActiveCdn">📋 Copiar ativos</button>
+                    </div>
+                    <div class="list-container">
+                        <div class="list-item" v-for="item in cdnResults" :key="item.url">
+                            <div class="list-item-content"><div class="list-item-title">{{ item.url }}</div><div class="list-item-subtitle">{{ item.host || item.error || 'Sem resposta' }} · {{ item.latency }} ms · HTTP {{ item.status || '—' }}</div></div>
+                            <span :style="{color: item.online ? '#34d399' : '#fb7185', fontWeight: '700'}">{{ item.online ? 'ONLINE' : 'OFFLINE' }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div v-else-if="cdnPool.length" class="glass-container config-card"><p class="text-muted">{{ cdnPool.length }} link(s) salvo(s). Clique em “Testar links” para verificar.</p></div>
             </div>
 
             <!-- Layout Section -->
@@ -430,6 +465,11 @@
                         XHTTP: 'XHTTP: o app usa servidor, porta, proxy, SNI e Path. O padrão de Path é /ssh.'
                     },
                     config: initialConfig,
+                    cdnPool: [],
+                    cdnInput: '',
+                    cdnResults: [],
+                    cdnActive: [],
+                    cdnTesting: false,
                     modal: {
                         isOpen: false,
                         type: '',
@@ -438,6 +478,9 @@
                     isSaving: false,
                     saveStatus: ''
                 }
+            },
+            mounted() {
+                this.loadCdnPool();
             },
             computed: {
                 jsonString() {
@@ -451,6 +494,43 @@
                     if (window.innerWidth <= 768) {
                         toggleSidebar();
                     }
+                },
+                async loadCdnPool() {
+                    try {
+                        const response = await fetch('/api/cdn-pool');
+                        const data = await response.json();
+                        this.cdnPool = data.urls || [];
+                        this.cdnInput = this.cdnPool.join('\n');
+                    } catch (e) {
+                        this.cdnPool = [];
+                    }
+                },
+                async saveCdnPool() {
+                    const urls = this.cdnInput.split(/[\n,]+/).map(item => item.trim()).filter(Boolean);
+                    const response = await fetch('/api/cdn-pool', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ urls }) });
+                    const data = await response.json();
+                    this.cdnPool = data.urls || [];
+                    this.cdnInput = this.cdnPool.join('\n');
+                    this.saveStatus = '✅ Pool CDN salvo!';
+                    setTimeout(() => { this.saveStatus = ''; }, 2500);
+                },
+                async testCdnPool() {
+                    this.cdnTesting = true;
+                    try {
+                        const urls = this.cdnInput.split(/[\n,]+/).map(item => item.trim()).filter(Boolean);
+                        const response = await fetch('/api/cdn-pool/test', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ urls }) });
+                        const data = await response.json();
+                        this.cdnResults = data.results || [];
+                        this.cdnActive = data.active || [];
+                    } finally {
+                        this.cdnTesting = false;
+                    }
+                },
+                async copyActiveCdn() {
+                    if (!this.cdnActive.length) return alert('Nenhum link ativo encontrado.');
+                    await navigator.clipboard.writeText(this.cdnActive.join('#'));
+                    this.saveStatus = '✅ Links ativos copiados!';
+                    setTimeout(() => { this.saveStatus = ''; }, 2500);
                 },
                 async saveConfig() {
                     this.isSaving = true;

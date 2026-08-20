@@ -116,6 +116,44 @@ function saveUser(username, data) {
     fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
+function getCdnPool(user) {
+    return Array.isArray(user.cdn_pool) ? user.cdn_pool.filter(Boolean).map(String) : [];
+}
+
+function normalizeCdnUrl(value) {
+    try {
+        const raw = String(value || '').trim();
+        if (!raw) return null;
+        const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+        if (!['http:', 'https:'].includes(url.protocol)) return null;
+        if (['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(url.hostname)) return null;
+        return url.toString().replace(/\/$/, '');
+    } catch (error) {
+        return null;
+    }
+}
+
+async function testCdnUrl(value) {
+    const started = Date.now();
+    let target;
+    try {
+        target = normalizeCdnUrl(value);
+        if (!target) throw new Error('URL inválida');
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        const response = await fetch(target, {
+            method: 'GET',
+            headers: { Range: 'bytes=0-0', 'User-Agent': 'C5G-CDN-Pool/1.0' },
+            redirect: 'follow',
+            signal: controller.signal
+        });
+        clearTimeout(timer);
+        return { url: target, online: response.ok || response.status < 500, status: response.status, latency: Date.now() - started, host: new URL(response.url).hostname };
+    } catch (error) {
+        return { url: target || String(value || ''), online: false, status: 0, latency: Date.now() - started, error: error.name === 'AbortError' ? 'Tempo esgotado' : error.message };
+    }
+}
+
 // Migration from old database.json
 const OLD_DB_FILE = path.join(__dirname, 'database.json');
 if (fs.existsSync(OLD_DB_FILE)) {
@@ -250,6 +288,40 @@ app.get('/dashboard', requireAuth, (req, res) => {
         appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`,
         themeUrl: `${hostUrl}/${encodeURIComponent(user.username)}/theme`
     });
+});
+
+app.get('/api/cdn-pool', requireAuth, (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    res.json({ urls: getCdnPool(user) });
+});
+
+app.post('/api/cdn-pool', requireAuth, (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const values = Array.isArray(req.body.urls) ? req.body.urls : String(req.body.urls || '').split(/[\\n,]+/);
+    const urls = [...new Set(values.map(normalizeCdnUrl).filter(Boolean))].slice(0, 100);
+    user.cdn_pool = urls;
+    saveUser(user.username, user);
+    res.json({ urls });
+});
+
+app.post('/api/cdn-pool/test', requireAuth, async (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const values = Array.isArray(req.body.urls) ? req.body.urls : getCdnPool(user);
+    const urls = [...new Set(values.map(normalizeCdnUrl).filter(Boolean))].slice(0, 100);
+    const results = await Promise.all(urls.map(testCdnUrl));
+    res.json({ results, active: results.filter(item => item.online).map(item => item.url) });
+});
+
+app.delete('/api/cdn-pool', requireAuth, (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const target = normalizeCdnUrl(req.body.url);
+    user.cdn_pool = getCdnPool(user).filter(url => url !== target);
+    saveUser(user.username, user);
+    res.json({ urls: user.cdn_pool });
 });
 
 app.post('/dashboard/save', requireAuth, (req, res) => {
