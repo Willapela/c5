@@ -1367,3 +1367,163 @@ body.dashboard-body::before {
         padding: 0.75rem;
     }
 }
+
+/* Responsive shell v3: left navigation with fluid content */
+:root {
+    --sidebar-width: 250px;
+}
+
+html,
+body {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+}
+
+body.dashboard-body {
+    display: block;
+}
+
+#app {
+    display: block !important;
+    width: 100%;
+    min-width: 0;
+}
+
+.sidebar {
+    left: 0;
+    right: auto;
+    width: var(--sidebar-width);
+    max-width: 86vw;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.main-content {
+    width: auto;
+    min-width: 0;
+    margin-left: var(--sidebar-width);
+    padding-right: clamp(1rem, 4vw, 4rem);
+    padding-left: clamp(1rem, 4vw, 4rem);
+}
+
+.main-content > div {
+    width: 100%;
+    min-width: 0;
+}
+
+.page-header,
+.card-grid,
+.list-container,
+.server-form,
+.url-box {
+    min-width: 0;
+}
+
+.page-header > *,
+.card-grid > *,
+.list-item-content,
+.url-box input {
+    min-width: 0;
+}
+
+.list-item-subtitle,
+.text-muted {
+    overflow-wrap: anywhere;
+}
+
+.floating-save-bar {
+    left: var(--sidebar-width);
+    width: auto;
+    right: 0;
+}
+
+@media (min-width: 1280px) {
+    .main-content {
+        padding-top: 3rem;
+    }
+
+    .page-header,
+    .main-content > div > .config-card,
+    .main-content > div > .card-grid,
+    .main-content > div > .list-container,
+    #jsonEditor {
+        max-width: 1480px;
+        margin-right: auto;
+    }
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+    :root {
+        --sidebar-width: 220px;
+    }
+
+    .sidebar {
+        padding-left: 0.8rem;
+        padding-right: 0.8rem;
+    }
+
+    .main-content {
+        padding-right: 1.25rem;
+        padding-left: 1.25rem;
+    }
+
+    .page-title {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --sidebar-width: 250px;
+    }
+
+    .sidebar {
+        transform: translateX(-105%);
+        z-index: 120;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        width: 100%;
+        margin-left: 0;
+        padding-right: 1rem;
+        padding-left: 1rem;
+    }
+
+    .floating-save-bar {
+        left: 0;
+        right: 0;
+        width: auto;
+    }
+
+    .page-header {
+        width: 100%;
+    }
+
+    .page-header .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding-right: 0.75rem;
+        padding-left: 0.75rem;
+    }
+
+    .config-card {
+        padding: 0.85rem;
+    }
+
+    .page-title {
+        font-size: 1.65rem;
+    }
+
+    .list-item {
+        padding: 0.9rem;
+    }
+}
