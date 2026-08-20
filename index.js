@@ -33,8 +33,11 @@ function requestBaseUrl(req) {
 function parseUserConfig(user) {
     try {
         const config = JSON.parse(user.config_json || '{}');
-        // Remove campos do painel nativo durante a leitura, inclusive para usuários antigos.
-        ['PainelConecta5G', 'ReleaseNotes', 'UrlUpdate', 'Sms', 'CheckUser', 'DnsPrimario', 'DnsSecundario', 'Udp'].forEach((key) => delete config[key]);
+        // Mantém apenas o contrato ConnectPlus e metadados internos necessários ao painel.
+        const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers'];
+        Object.keys(config).forEach((key) => {
+            if (!allowedRootKeys.includes(key)) delete config[key];
+        });
         if (!Array.isArray(config.Servers)) config.Servers = [];
         if (config.UdpPort === undefined) config.UdpPort = '7300';
         if (config.Contato === undefined) config.Contato = '';
@@ -264,7 +267,10 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
                 nextConfig.Version = previousVersion + 1;
             }
             nextConfig.AppVersion = Number(nextConfig.AppVersion) || Number(nextConfig.Version) || 1;
-            ['PainelConecta5G', 'ReleaseNotes', 'UrlUpdate', 'Sms', 'CheckUser', 'DnsPrimario', 'DnsSecundario', 'Udp'].forEach((key) => delete nextConfig[key]);
+            const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers'];
+            Object.keys(nextConfig).forEach((key) => {
+                if (!allowedRootKeys.includes(key)) delete nextConfig[key];
+            });
             nextConfig.UdpPort = String(nextConfig.UdpPort ?? '7300');
             nextConfig.Contato = String(nextConfig.Contato ?? '');
             nextConfig.Site = String(nextConfig.Site ?? '');

@@ -1575,3 +1575,43 @@ body.dashboard-body {
     border-color: rgba(110,168,254,0.32);
     box-shadow: 0 4px 12px rgba(50,108,242,0.14);
 }
+
+/* Mobile sidebar footer remains visible above the save bar */
+@media (max-width: 768px) {
+    .sidebar {
+        height: 100dvh;
+        padding-bottom: 0.9rem;
+        z-index: 140;
+    }
+
+    .sidebar .nav-menu {
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .sidebar-footer {
+        flex: 0 0 auto;
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        margin-top: 0.75rem;
+        padding: 0.85rem 0.65rem 0.2rem;
+        background: linear-gradient(180deg, rgba(8,14,26,0.72), rgba(8,14,26,1) 30%);
+    }
+
+    .sidebar-footer .user-profile {
+        margin-bottom: 0.65rem;
+    }
+
+    .sidebar-footer .btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+    }
+
+    .floating-save-bar {
+        z-index: 100;
+    }
+}
