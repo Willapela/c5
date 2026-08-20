@@ -252,7 +252,7 @@
                         <div v-if="modal.type === 'Servers' && config.Servers[modal.index]" class="server-form">
                             <div class="form-group">
                                 <label>Modo de conexão</label>
-                                <select v-model="config.Servers[modal.index].Info">
+                                <select v-model="config.Servers[modal.index].Info" @change="onConnectionModeChange">
                                     <option v-for="mode in connectionModes" :key="mode" :value="mode">{{ mode }}</option>
                                 </select>
                                 <div class="text-muted" style="margin-top: .5rem; line-height: 1.45;">
@@ -299,31 +299,33 @@
                                     <input type="password" v-model="config.Servers[modal.index].PASS">
                                 </div>
                             </div>
-                            <div v-if="['Direct','Proxy','Tlsws','XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
+                            <div v-if="['Direct','Proxy','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
                                 <div class="grid-col-full">
                                     <label>Payload</label>
                                     <textarea v-model="config.Servers[modal.index].Payload" placeholder="GET /app8 HTTP/1.1[lf]Host: dominio.com[lf]Upgrade: websocket[lf][lf]"></textarea>
                                     <small class="text-muted">Use [lf] para quebra de linha. O app usa exatamente o texto informado.</small>
                                 </div>
                             </div>
-                            <div v-if="['Proxy','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
+                            <div v-if="['Proxy','Tlsws','XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
                                 <div>
-                                    <label>ProxyIP</label>
+                                    <label>ProxyIP / Host</label>
                                     <input type="text" v-model="config.Servers[modal.index].ProxyIP" placeholder="IP ou host; use # para múltiplos">
-                                    <small class="field-help">Para rotação, informe vários proxies separados por <code>#</code>. Exemplo: <code>192.168.1.1#191.162.1.0</code></small>
+                                    <small class="field-help">Para rotação, separe vários proxies com <code>#</code>. No XHTTP, pode ser um domínio, como <code>oc3xhkzwdcw.map.azionedge.net</code>.</small>
                                 </div>
                                 <div>
-                                    <label>ProxyPort</label>
+                                    <label>ProxyPort <span v-if="config.Servers[modal.index].Info === 'XHTTP'">(opcional)</span></label>
                                     <input type="text" v-model="config.Servers[modal.index].ProxyPort" placeholder="443">
                                 </div>
                             </div>
                             <div v-if="['Ssl','Tlsws','XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group">
                                 <label>SNI</label>
-                                <input type="text" v-model="config.Servers[modal.index].SNI" placeholder="dominio.com">
+                                <input type="text" v-model="config.Servers[modal.index].SNI" placeholder="app.tim.com.br">
+                                <small v-if="config.Servers[modal.index].Info === 'XHTTP'" class="field-help">No XHTTP, informe o domínio SNI usado pelo servidor.</small>
                             </div>
                             <div v-if="config.Servers[modal.index].Info === 'XHTTP'" class="form-group">
-                                <label>Path</label>
+<label>Path</label>
                                 <input type="text" v-model="config.Servers[modal.index].Path" placeholder="/ssh">
+                                    <small class="field-help">No XHTTP, use o caminho configurado pelo servidor, por exemplo <code>/ssh</code>.</small>
                             </div>
                             <div class="form-group grid-col-2">
                                 <div>
@@ -487,6 +489,14 @@
                 },
                 closeModal() {
                     this.modal.isOpen = false;
+                },
+                onConnectionModeChange() {
+                    const server = this.config.Servers[this.modal.index];
+                    if (!server) return;
+                    if (server.Info === 'XHTTP') {
+                        server.Payload = '';
+                        if (server.ProxyPort === '443') server.ProxyPort = '';
+                    }
                 },
                 addServer() {
                     this.config.Servers.push({
