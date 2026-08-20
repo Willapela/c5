@@ -46,6 +46,9 @@ function buildUserConfig(req, username, user) {
     config.UrlUpdate = configUrl;
     config.Update = configUrl;
     config.Sms = smsUrl;
+    if (config.Theme && typeof config.Theme === 'object') {
+        config.Theme.Update = `${base}/${encodeURIComponent(username)}/theme`;
+    }
     return config;
 }
 
@@ -120,6 +123,25 @@ const DEFAULT_CONFIG = {
     "UpdateApk": "",
     "UrlUpdate": "",
     "Sms": "",
+    "Theme": {
+        "Version": "1",
+        "Update": "",
+        "AppName": "ConnectPlus",
+        "ImgFundo": "",
+        "ImgLogo": "",
+        "ImgBanner": "",
+        "ImgMenu": "",
+        "ImgLogs": "",
+        "ImgCheck": "",
+        "ImgUser": "",
+        "ImgPass": "",
+        "ColorOne": "#7A333333",
+        "ColorTwo": "#7A333333",
+        "ColorStarter": "#7A333333",
+        "ColorDialogs": "#84ffffff",
+        "ColorButtons": "#333333",
+        "ImgUpdate": ""
+    },
     "logoonline": "https://i.ibb.co/1GFWft65/ic-banner.png",
     "fundoonline": "https://i.ibb.co/Pz189Nvw/77bb3128f92f68bbf7e4e38156078416.jpg",
     "banneRodapeOnline": "",
@@ -314,7 +336,10 @@ app.get('/:username/theme', (req, res) => {
     const user = getUser(username);
     if (!user) return res.status(404).send('Not Found');
     const config = parseUserConfig(user);
-    res.type('application/json').send(config.Theme || { Version: String(config.Version ?? 1) });
+    const theme = (config.Theme && typeof config.Theme === 'object') ? { ...config.Theme } : {};
+    theme.Version = String(theme.Version ?? config.Version ?? 1);
+    theme.Update = `${requestBaseUrl(req)}/${encodeURIComponent(username)}/theme`;
+    res.type('application/json').send(theme);
 });
 
 app.listen(PORT, '0.0.0.0', () => {
