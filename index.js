@@ -278,7 +278,8 @@ app.get('/dashboard', requireAuth, (req, res) => {
         user: req.user,
         configStr: user.config_json,
         appUrl: `${hostUrl}/${encodeURIComponent(user.username)}/config`,
-        appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`
+        appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`,
+        themeUrl: `${hostUrl}/${encodeURIComponent(user.username)}/theme`
     });
 });
 
