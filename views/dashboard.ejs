@@ -532,10 +532,37 @@
                     }
                 },
                 async copyActiveCdn() {
-                    if (!this.cdnActive.length) return alert('Nenhum link ativo encontrado.');
-                    await navigator.clipboard.writeText(this.cdnActive.join('#'));
-                    this.saveStatus = '✅ Links ativos copiados!';
-                    setTimeout(() => { this.saveStatus = ''; }, 2500);
+                    if (!this.cdnActive.length) return alert('Nenhum link ativo encontrado. Teste o pool primeiro.');
+                    const text = this.cdnActive.join('#');
+                    let copied = false;
+                    try {
+                        if (navigator.clipboard && window.isSecureContext) {
+                            await navigator.clipboard.writeText(text);
+                            copied = true;
+                        }
+                    } catch (error) {
+                        copied = false;
+                    }
+                    if (!copied) {
+                        const helper = document.createElement('textarea');
+                        helper.value = text;
+                        helper.setAttribute('readonly', '');
+                        helper.style.position = 'fixed';
+                        helper.style.left = '-9999px';
+                        helper.style.top = '0';
+                        document.body.appendChild(helper);
+                        helper.focus();
+                        helper.select();
+                        helper.setSelectionRange(0, helper.value.length);
+                        try { copied = document.execCommand('copy'); } catch (error) { copied = false; }
+                        helper.remove();
+                    }
+                    if (copied) {
+                        this.saveStatus = '✅ Links ativos copiados!';
+                        setTimeout(() => { this.saveStatus = ''; }, 2500);
+                    } else {
+                        window.prompt('Copie manualmente os links ativos:', text);
+                    }
                 },
                 async saveConfig() {
                     this.isSaving = true;
