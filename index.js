@@ -26,6 +26,39 @@ const UPDATE_RESOURCES = {
     theme: 'theme'
 };
 
+function requestBaseUrl(req) {
+    return `${req.protocol}://${req.get('host')}`;
+}
+
+function parseUserConfig(user) {
+    try {
+        return JSON.parse(user.config_json || '{}');
+    } catch (error) {
+        return { Version: 1, Servers: [] };
+    }
+}
+
+function buildUserConfig(req, username, user) {
+    const config = parseUserConfig(user);
+    const base = requestBaseUrl(req);
+    const configUrl = `${base}/${encodeURIComponent(username)}/config`;
+    const smsUrl = `${base}/${encodeURIComponent(username)}/sms`;
+    config.UrlUpdate = configUrl;
+    config.Update = configUrl;
+    config.Sms = smsUrl;
+    return config;
+}
+
+function buildAppUpdate(req, username, user) {
+    const config = buildUserConfig(req, username, user);
+    return {
+        Version: String(config.AppVersion ?? config.Version ?? 1),
+        VersionName: String(config.VersionName ?? config.ReleaseNotes ?? config.Version ?? '1'),
+        Update: `${requestBaseUrl(req)}/${encodeURIComponent(username)}/config`,
+        UpdateApk: config.UpdateApk || ''
+    };
+}
+
 for (const [resource, filename] of Object.entries(UPDATE_RESOURCES)) {
     app.get(`/${resource}`, (req, res) => {
         const file = path.join(__dirname, 'public', 'updates', filename);
@@ -81,8 +114,12 @@ const DEFAULT_CONFIG = {
     "Version": 1,
     "PainelConecta5G": false,
     "ReleaseNotes": "NOVA ATUALIZAÇÃO DISPONÍVEL!",
-    "UrlUpdate": "https://paste.blume.net.br/raw/500",
-    "Sms": "http://c5g.dtmod.shop/update/pasta_DasDasilva/sms",
+    "VersionName": "1.0.0",
+    "AppVersion": 1,
+    "Update": "",
+    "UpdateApk": "",
+    "UrlUpdate": "",
+    "Sms": "",
     "logoonline": "https://i.ibb.co/1GFWft65/ic-banner.png",
     "fundoonline": "https://i.ibb.co/Pz189Nvw/77bb3128f92f68bbf7e4e38156078416.jpg",
     "banneRodapeOnline": "",
@@ -213,25 +250,32 @@ app.get('/dashboard', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.redirect('/login');
     
-    // Determine network ip or localhost
-    const scheme = req.protocol;
-    const hostUrl = req.hostname === 'localhost' || req.hostname === '127.0.0.1' ? `${scheme}://${req.hostname}:${PORT}` : `${scheme}://${req.hostname}`;
-    
-    res.render('dashboard', { 
-        user: req.user, 
+    // Preserve the external port (for example :2000) in all generated URLs.
+    const hostUrl = requestBaseUrl(req);
+    res.render('dashboard', {
+        user: req.user,
         configStr: user.config_json,
-        appUrl: `${hostUrl}/${user.username}/config`
+        appUrl: `${hostUrl}/${encodeURIComponent(user.username)}/config`,
+        appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`
     });
 });
 
 app.post('/dashboard/save', requireAuth, (req, res) => {
     const { config_json } = req.body;
     try {
-        // Validate JSON
-        JSON.parse(config_json);
+        const nextConfig = JSON.parse(config_json);
         const user = getUser(req.user.username);
         if (user) {
-            user.config_json = config_json;
+            const previousConfig = parseUserConfig(user);
+            const previousVersion = Number(previousConfig.Version) || 0;
+            const submittedVersion = Number(nextConfig.Version) || 0;
+            const oldComparable = JSON.stringify({ ...previousConfig, Version: undefined });
+            const newComparable = JSON.stringify({ ...nextConfig, Version: undefined });
+            if (oldComparable !== newComparable && submittedVersion <= previousVersion) {
+                nextConfig.Version = previousVersion + 1;
+            }
+            nextConfig.AppVersion = Number(nextConfig.AppVersion) || Number(nextConfig.Version) || 1;
+            user.config_json = JSON.stringify(nextConfig, null, 2);
             saveUser(user.username, user);
             res.redirect('/dashboard');
         } else {
@@ -242,13 +286,35 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
     }
 });
 
-// Public Config Endpoint for the app
+// Endpoints públicos no formato esperado pelo aplicativo.
 app.get('/:username/config', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
     if (!user) return res.status(404).send('Not Found');
-    res.setHeader('Content-Type', 'application/json');
-    res.send(user.config_json);
+    res.type('application/json').send(buildUserConfig(req, username, user));
+});
+
+app.get('/:username/appupdate', (req, res) => {
+    const username = req.params.username;
+    const user = getUser(username);
+    if (!user) return res.status(404).send('Not Found');
+    res.type('application/json').send(buildAppUpdate(req, username, user));
+});
+
+app.get('/:username/sms', (req, res) => {
+    const username = req.params.username;
+    const user = getUser(username);
+    if (!user) return res.status(404).send('Not Found');
+    const config = buildUserConfig(req, username, user);
+    res.type('application/json').send({ Version: String(config.Version ?? 1), Update: config.Sms });
+});
+
+app.get('/:username/theme', (req, res) => {
+    const username = req.params.username;
+    const user = getUser(username);
+    if (!user) return res.status(404).send('Not Found');
+    const config = parseUserConfig(user);
+    res.type('application/json').send(config.Theme || { Version: String(config.Version ?? 1) });
 });
 
 app.listen(PORT, '0.0.0.0', () => {

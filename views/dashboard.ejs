@@ -106,9 +106,14 @@
                 <div class="glass-container config-card" style="margin-bottom: 2rem;">
                     <h3 style="margin-bottom: 1rem; color: #fff;">Sua URL de Sincronização</h3>
                     <p class="text-muted" style="margin-bottom: 1rem;">Cole esta URL no campo "Update URL" do seu aplicativo Conecta5G para sincronizar as configurações.</p>
-                    <div class="url-box" style="margin-bottom: 0;">
+                    <div class="url-box" style="margin-bottom: .75rem;">
                         <input type="text" readonly value="<%= appUrl %>" id="configUrl">
                         <button onclick="copyUrl()" class="btn secondary">Copiar</button>
+                    </div>
+                    <p class="text-muted" style="margin: .5rem 0 0;">URL do appupdate, usada somente se o aplicativo solicitar atualização do APK:</p>
+                    <div class="url-box" style="margin-bottom: 0;">
+                        <input type="text" readonly value="<%= appUpdateUrl %>" id="appUpdateUrl">
+                        <button onclick="copySpecificUrl('appUpdateUrl')" class="btn secondary">Copiar</button>
                     </div>
                 </div>
 
@@ -138,8 +143,22 @@
                             <input type="number" v-model="config.Version">
                         </div>
                         <div class="form-group">
-                            <label>URL de Atualização (Fixo)</label>
+                            <label>URL de Atualização da Configuração</label>
                             <input type="text" v-model="config.UrlUpdate" readonly style="background-color: rgba(255,255,255,0.05); color: #888; cursor: not-allowed;">
+                        </div>
+                        <div class="form-group">
+                            <label>Versão do Aplicativo</label>
+                            <input type="number" v-model="config.AppVersion" min="1">
+                            <small class="text-muted">Aumente este número quando publicar um APK novo.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Nome da Versão</label>
+                            <input type="text" v-model="config.VersionName" placeholder="Ex.: 2.0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>URL direta do APK</label>
+                            <input type="url" v-model="config.UpdateApk" placeholder="https://exemplo.com/app.apk">
+                            <small class="text-muted">O aplicativo precisa conseguir baixar esta URL sem login ou redirecionamento bloqueado.</small>
                         </div>
                         <div class="form-group">
                             <label>Notas de Lançamento</label>
@@ -362,6 +381,9 @@
                                 <select v-model="config.Servers[modal.index].Mode">
                                     <option v-for="mode in connectionModes" :key="mode" :value="mode">{{ mode }}</option>
                                 </select>
+                                <div class="text-muted" style="margin-top: .5rem; line-height: 1.45;">
+                                    {{ modeDescriptions[config.Servers[modal.index].Mode] }}
+                                </div>
                             </div>
                             <div class="form-group grid-col-2">
                                 <div>
@@ -415,11 +437,11 @@
                                 <label>URL Check User</label>
                                 <input type="text" v-model="config.Servers[modal.index].CheckUser">
                             </div>
-                            <div class="form-group">
+                            <div v-if="['SSH_PROXY','SSL_DIRECT','SSL_PROXY'].includes(config.Servers[modal.index].Mode)" class="form-group">
                                 <label>Payload ([lf] para quebra de linha; # para múltiplos)</label>
                                 <textarea v-model="config.Servers[modal.index].Payload" placeholder="GET / HTTP/1.1[lf]Host: exemplo.com[lf][lf]"></textarea>
                             </div>
-                            <div class="form-group grid-col-2">
+                            <div v-if="['SSH_PROXY','SSL_PROXY','OVPN_PROXY','OVPN_SSL_PROXY'].includes(config.Servers[modal.index].Mode)" class="form-group grid-col-2">
                                 <div>
                                     <label>IP/Host do Proxy (# para múltiplos)</label>
                                     <input type="text" v-model="config.Servers[modal.index].ProxyIP">
@@ -429,7 +451,7 @@
                                     <input type="text" v-model="config.Servers[modal.index].ProxyPort">
                                 </div>
                             </div>
-                            <div class="form-group grid-col-2">
+                            <div v-if="['SSL_DIRECT','SSL_PROXY','OVPN_SSL','OVPN_SSL_PROXY','V2RAY'].includes(config.Servers[modal.index].Mode)" class="form-group grid-col-2">
                                 <div>
                                     <label>SNI / Bug Host</label>
                                     <input type="text" v-model="config.Servers[modal.index].SNI">
@@ -449,7 +471,7 @@
                                     <input type="text" v-model="config.Servers[modal.index].ColorDescription" placeholder="#ffffff">
                                 </div>
                             </div>
-                            <div class="form-group grid-col-2">
+                            <div v-if="['SSH_DNSTT','HYSTERIA'].includes(config.Servers[modal.index].Mode)" class="form-group grid-col-2">
                                 <div>
                                     <label>DNS 1</label>
                                     <input type="text" v-model="config.Servers[modal.index].DNS1">
@@ -459,11 +481,11 @@
                                     <input type="text" v-model="config.Servers[modal.index].DNS2">
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div v-if="['SSH_DNSTT','HYSTERIA'].includes(config.Servers[modal.index].Mode)" class="form-group">
                                 <label>Portas UDP</label>
                                 <input type="text" v-model="config.Servers[modal.index].UDPPorts" placeholder="7300">
                             </div>
-                            <div class="form-group grid-col-2">
+                            <div v-if="['SSH_DIRECT','SSH_PROXY','SSH_DNSTT','SSL_DIRECT','SSL_PROXY'].includes(config.Servers[modal.index].Mode)" class="form-group grid-col-2">
                                 <div>
                                     <label>Nome de usuário</label>
                                     <input type="text" v-model="config.Servers[modal.index].USER">
@@ -575,8 +597,9 @@
                     { Info: server.Info || server.TYPE || serverDefaults.Info }
                 ));
                 
-                // Force UrlUpdate to always be the user's unique config URL
+                // Force update URLs to always be the user's unique config URL.
                 initialConfig.UrlUpdate = appUrl;
+                initialConfig.Update = appUrl;
                 
                 // Initialize text layout keys
                 const stringKeys = ['logoonline', 'fundoonline', 'banneRodapeOnline', 'fundoDoLogOnline', 'EmailFeedback', 'UrlContato', 'UrlTermos', 'ModderLinkWhatsapp', 'ModderLinkTelegram'];
@@ -607,6 +630,18 @@
                         'OVPN_PROXY', 'OVPN_SSL', 'OVPN_SSL_PROXY',
                         'V2RAY', 'HYSTERIA'
                     ],
+                    modeDescriptions: {
+                        SSH_DIRECT: 'SSH direto: conecta diretamente ao servidor SSH, sem proxy HTTP.',
+                        SSH_PROXY: 'SSH com proxy: use proxy, payload e SNI quando a rede exigir um intermediário.',
+                        SSH_DNSTT: 'SSH via DNS.TT: exige chave DNS.TT, nameserver e servidor DNS.TT.',
+                        SSL_DIRECT: 'SSL direto: usa TLS no servidor, com SNI e versão TLS.',
+                        SSL_PROXY: 'SSL com proxy: combina TLS, SNI, payload e proxy HTTP.',
+                        OVPN_PROXY: 'OpenVPN com proxy: informe o arquivo de configuração OpenVPN e os dados do proxy.',
+                        OVPN_SSL: 'OpenVPN sobre SSL: informe o arquivo OpenVPN e os parâmetros TLS.',
+                        OVPN_SSL_PROXY: 'OpenVPN sobre SSL e proxy: combina configuração OpenVPN, TLS e proxy.',
+                        V2RAY: 'V2Ray: informe a configuração V2Ray e, se necessário, o UUID.',
+                        HYSTERIA: 'Hysteria: informe porta, obfs e limites de upload/download.'
+                    },
                     config: initialConfig,
                     modal: {
                         isOpen: false,
@@ -702,15 +737,18 @@
             }
         }).mount('#app')
 
-        function copyUrl() {
-            var copyText = document.getElementById("configUrl");
+        function copySpecificUrl(id) {
+            var copyText = document.getElementById(id);
             copyText.select();
             copyText.setSelectionRange(0, 99999);
             document.execCommand("copy");
-            
-            const btn = document.querySelector('.url-box .btn');
+            const btn = copyText.parentElement.querySelector('.btn');
             btn.textContent = 'Copiado!';
             setTimeout(() => btn.textContent = 'Copiar', 2000);
+        }
+
+        function copyUrl() {
+            copySpecificUrl('configUrl');
         }
 
         function toggleSidebar() {
