@@ -43,7 +43,7 @@ function buildUserConfig(req, username, user) {
     const base = requestBaseUrl(req);
     const configUrl = `${base}/${encodeURIComponent(username)}/config`;
     const smsUrl = `${base}/${encodeURIComponent(username)}/sms`;
-    const serverKeys = ['Name', 'ColorName', 'Description', 'ColorDescription', 'FLAG', 'ServerIP', 'ServerPort', 'CheckUser', 'USER', 'PASS', 'Payload', 'ProxyIP', 'ProxyPort', 'SNI', 'Path', 'Color', 'Info'];
+    const serverKeys = ['Name', 'ColorName', 'Description', 'ColorDescription', 'FLAG', 'ServerIP', 'ServerPort', 'CheckUser', 'USER', 'PASS', 'Payload', 'ProxyIP', 'ProxyPort', 'SNI', 'Path', 'TLSVersion', 'Color', 'Info'];
     if (Array.isArray(config.Servers)) {
         config.Servers = config.Servers.map((server) => {
             const clean = {};

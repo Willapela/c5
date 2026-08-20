@@ -355,6 +355,14 @@
                                     <input type="text" v-model="config.Servers[modal.index].Color" placeholder="#0000ff">
                                 </div>
                                 <div>
+                                    <label>Versão TLS</label>
+                                    <select v-model="config.Servers[modal.index].TLSVersion">
+                                        <option value="TLSv1.3">TLSv1.3</option>
+                                        <option value="TLSv1.2">TLSv1.2</option>
+                                        <option value="TLSv1.1">TLSv1.1</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label>Info / Modo</label>
                                     <select v-model="config.Servers[modal.index].Info">
                                         <option v-for="mode in connectionModes" :value="mode">{{ mode }}</option>
@@ -400,7 +408,7 @@
                 const serverDefaults = {
                     Name: '', ColorName: '#ffffff', Description: '', ColorDescription: '#ffffff',
                     FLAG: '', ServerIP: '', ServerPort: '443', CheckUser: '', USER: '', PASS: '',
-                    Payload: '', ProxyIP: '', ProxyPort: '443', SNI: '', Path: '',
+                    Payload: '', ProxyIP: '', ProxyPort: '443', SNI: '', Path: '', TLSVersion: 'TLSv1.2',
                     Color: '#0000ff', Info: 'Tlsws'
                 };
                 const connectPlusKeys = Object.keys(serverDefaults);
@@ -534,6 +542,7 @@
                         ProxyPort: "443",
                         SNI: "",
                         Path: "",
+                        TLSVersion: "TLSv1.2",
                         Color: "#0000ff",
                         Info: "Tlsws"
                     });
