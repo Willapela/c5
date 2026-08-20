@@ -32,44 +32,51 @@ function requestBaseUrl(req) {
 
 function parseUserConfig(user) {
     try {
-        return JSON.parse(user.config_json || '{}');
+        const config = JSON.parse(user.config_json || '{}');
+        // Remove campos do painel nativo durante a leitura, inclusive para usuários antigos.
+        ['PainelConecta5G', 'ReleaseNotes', 'UrlUpdate', 'Sms', 'CheckUser', 'DnsPrimario', 'DnsSecundario', 'Udp'].forEach((key) => delete config[key]);
+        if (!Array.isArray(config.Servers)) config.Servers = [];
+        if (config.UdpPort === undefined) config.UdpPort = '7300';
+        if (config.Contato === undefined) config.Contato = '';
+        if (config.Site === undefined) config.Site = '';
+        return config;
     } catch (error) {
-        return { Version: 1, Servers: [] };
+        return { Version: 1, UdpPort: '7300', Contato: '', Site: '', Servers: [] };
     }
 }
 
 function buildUserConfig(req, username, user) {
-    const config = parseUserConfig(user);
+    const stored = parseUserConfig(user);
     const base = requestBaseUrl(req);
     const configUrl = `${base}/${encodeURIComponent(username)}/config`;
-    const smsUrl = `${base}/${encodeURIComponent(username)}/sms`;
-    const serverKeys = ['Name', 'ColorName', 'Description', 'ColorDescription', 'FLAG', 'ServerIP', 'ServerPort', 'CheckUser', 'USER', 'PASS', 'Payload', 'ProxyIP', 'ProxyPort', 'SNI', 'Path', 'TLSVersion', 'Color', 'Info'];
-    if (Array.isArray(config.Servers)) {
-        config.Servers = config.Servers.map((server) => {
-            const clean = {};
-            serverKeys.forEach((key) => {
-                if (server[key] !== undefined) clean[key] = server[key];
-            });
-            if (!['Ssl', 'Direct', 'Proxy', 'Tlsws', 'XHTTP'].includes(clean.Info)) clean.Info = 'Tlsws';
-            return clean;
+    const serverKeys = ['Name', 'ColorName', 'Description', 'ColorDescription', 'FLAG', 'ServerIP', 'ServerPort', 'CheckUser', 'USER', 'PASS', 'Payload', 'ProxyIP', 'ProxyPort', 'SNI', 'Path', 'Color', 'Info'];
+    const servers = Array.isArray(stored.Servers) ? stored.Servers.map((server) => {
+        const clean = {};
+        serverKeys.forEach((key) => {
+            if (server[key] !== undefined) clean[key] = server[key];
         });
-    }
-    config.UrlUpdate = configUrl;
-    config.Update = configUrl;
-    config.Sms = smsUrl;
-    if (config.Theme && typeof config.Theme === 'object') {
-        config.Theme.Update = `${base}/${encodeURIComponent(username)}/theme`;
-    }
-    return config;
+        if (!['Ssl', 'Direct', 'Proxy', 'Tlsws', 'XHTTP'].includes(clean.Info)) clean.Info = 'Tlsws';
+        return clean;
+    }) : [];
+
+    // O endpoint público segue exclusivamente o modelo ConnectPlus enviado.
+    return {
+        Version: String(stored.Version ?? 1),
+        Update: configUrl,
+        UdpPort: String(stored.UdpPort ?? '7300'),
+        Contato: String(stored.Contato ?? ''),
+        Site: String(stored.Site ?? ''),
+        Servers: servers
+    };
 }
 
 function buildAppUpdate(req, username, user) {
-    const config = buildUserConfig(req, username, user);
+    const stored = parseUserConfig(user);
     return {
-        Version: String(config.AppVersion ?? config.Version ?? 1),
-        VersionName: String(config.VersionName ?? config.ReleaseNotes ?? config.Version ?? '1'),
+        Version: String(stored.AppVersion ?? stored.Version ?? 1),
+        VersionName: String(stored.VersionName ?? stored.Version ?? '1'),
         Update: `${requestBaseUrl(req)}/${encodeURIComponent(username)}/config`,
-        UpdateApk: config.UpdateApk || ''
+        UpdateApk: stored.UpdateApk || ''
     };
 }
 
@@ -126,14 +133,12 @@ if (fs.existsSync(OLD_DB_FILE)) {
 // Default Config from the app
 const DEFAULT_CONFIG = {
     "Version": 1,
-    "PainelConecta5G": false,
-    "ReleaseNotes": "NOVA ATUALIZAÇÃO DISPONÍVEL!",
     "VersionName": "1.0.0",
     "AppVersion": 1,
-    "Update": "",
     "UpdateApk": "",
-    "UrlUpdate": "",
-    "Sms": "",
+    "UdpPort": "7300",
+    "Contato": "",
+    "Site": "",
     "Theme": {
         "Version": "1",
         "Update": "",
@@ -153,13 +158,6 @@ const DEFAULT_CONFIG = {
         "ColorButtons": "#333333",
         "ImgUpdate": "https://i.imgur.com/CJFEvDW.png"
     },
-    "DnsPrimario": "8.8.8.8",
-    "DnsSecundario": "8.4.4.8",
-    "Udp": [
-        {
-            "Porta": "7300"
-        }
-    ],
     "Servers": []
 };
 
@@ -244,7 +242,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     const hostUrl = requestBaseUrl(req);
     res.render('dashboard', {
         user: req.user,
-        configStr: user.config_json,
+        configStr: JSON.stringify(parseUserConfig(user), null, 2),
         appUrl: `${hostUrl}/${encodeURIComponent(user.username)}/config`,
         appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`,
         themeUrl: `${hostUrl}/${encodeURIComponent(user.username)}/theme`
@@ -266,6 +264,10 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
                 nextConfig.Version = previousVersion + 1;
             }
             nextConfig.AppVersion = Number(nextConfig.AppVersion) || Number(nextConfig.Version) || 1;
+            ['PainelConecta5G', 'ReleaseNotes', 'UrlUpdate', 'Sms', 'CheckUser', 'DnsPrimario', 'DnsSecundario', 'Udp'].forEach((key) => delete nextConfig[key]);
+            nextConfig.UdpPort = String(nextConfig.UdpPort ?? '7300');
+            nextConfig.Contato = String(nextConfig.Contato ?? '');
+            nextConfig.Site = String(nextConfig.Site ?? '');
             user.config_json = JSON.stringify(nextConfig, null, 2);
             saveUser(user.username, user);
             res.redirect('/dashboard');

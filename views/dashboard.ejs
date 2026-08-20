@@ -145,42 +145,26 @@
                 <div class="glass-container config-card">
                     <div class="card-grid form-grid-2">
                         <div class="form-group">
-                            <label>Versão da Configuração (Aumente para forçar atualização)</label>
-                            <input type="number" v-model="config.Version">
+                            <label>Versão da configuração</label>
+                            <input type="number" v-model="config.Version" min="1">
+                            <small class="text-muted">Aumente a versão para o ConnectPlus buscar uma nova configuração.</small>
                         </div>
                         <div class="form-group">
-                            <label>URL de Atualização da Configuração</label>
-                            <input type="text" v-model="config.UrlUpdate" readonly style="background-color: rgba(255,255,255,0.05); color: #888; cursor: not-allowed;">
+                            <label>Porta UDP</label>
+                            <input type="text" v-model="config.UdpPort" placeholder="7300">
                         </div>
                         <div class="form-group">
-                            <label>Versão do Aplicativo</label>
-                            <input type="number" v-model="config.AppVersion" min="1">
-                            <small class="text-muted">Aumente este número quando publicar um APK novo.</small>
+                            <label>Contato</label>
+                            <input type="url" v-model="config.Contato" placeholder="https://t.me/seu_canal">
                         </div>
                         <div class="form-group">
-                            <label>Nome da Versão</label>
-                            <input type="text" v-model="config.VersionName" placeholder="Ex.: 2.0.1">
+                            <label>Site</label>
+                            <input type="url" v-model="config.Site" placeholder="https://www.speedtest.net">
                         </div>
-                        <div class="form-group">
-                            <label>URL direta do APK</label>
-                            <input type="url" v-model="config.UpdateApk" placeholder="https://exemplo.com/app.apk">
-                            <small class="text-muted">O aplicativo precisa conseguir baixar esta URL sem login ou redirecionamento bloqueado.</small>
-                        </div>
-                        <div class="form-group">
-                            <label>Notas de Lançamento</label>
-                            <input type="text" v-model="config.ReleaseNotes">
-                        </div>
-                        <div class="form-group">
-                            <label>URL do SMS</label>
-                            <input type="text" v-model="config.Sms">
-                        </div>
-                        <div class="form-group">
-                            <label>Check User (Ativar/Desativar ou URL)</label>
-                            <input type="text" v-model="config.CheckUser">
-                        </div>
-                        <div class="form-group">
-                            <label>DNS Primário</label>
-                            <input type="text" v-model="config.DnsPrimario">
+                        <div class="form-group full-width">
+                            <label>URL da configuração</label>
+                            <input type="text" value="<%= appUrl %>" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                            <small class="text-muted">Gerada automaticamente para o seu usuário e entregue no formato ConnectPlus.</small>
                         </div>
                     </div>
                 </div>
@@ -416,9 +400,10 @@
                     return normalized;
                 });
                 
-                // Force update URLs to always be the user's unique config URL.
-                initialConfig.UrlUpdate = appUrl;
                 initialConfig.Update = appUrl;
+                initialConfig.UdpPort = String(initialConfig.UdpPort ?? '7300');
+                initialConfig.Contato = initialConfig.Contato ?? '';
+                initialConfig.Site = initialConfig.Site ?? '';
                 initialConfig.Theme = Object.assign({
                     Version: '1', Update: '', AppName: 'ConnectPlus', ImgFundo: '', ImgLogo: '', ImgBanner: '',
                     ImgMenu: '', ImgLogs: '', ImgCheck: '', ImgUser: '', ImgPass: '', ColorOne: '#7A333333',
@@ -426,24 +411,6 @@
                     ColorButtons: '#333333', ImgUpdate: ''
                 }, initialConfig.Theme || {});
                 initialConfig.Theme.AppName = 'ConnectPlus';
-                
-                // Initialize text layout keys
-                const stringKeys = ['logoonline', 'fundoonline', 'banneRodapeOnline', 'fundoDoLogOnline', 'EmailFeedback', 'UrlContato', 'UrlTermos', 'ModderLinkWhatsapp', 'ModderLinkTelegram'];
-                stringKeys.forEach(k => {
-                    if (initialConfig[k] === undefined) initialConfig[k] = "";
-                });
-
-                // Initialize color boolean/string keys
-                const colorKeys = [
-                    'ModderCorCaixaServ', 'ModderCorCaixaPay', 'ModderCorCaixaCentral', 'ModderCorCaixaConexao', 
-                    'ModderCorCaixaRegistro', 'ModderCorCaixaFerramentas', 'ModderCorCaixaUsuario', 
-                    'ModderCorCaixaSenha', 'ModderCorBotaoIniciar', 'ModderCorBotaoLog', 'ModderCorBotaoConfig'
-                ];
-                colorKeys.forEach(k => {
-                    if (initialConfig[k] === undefined) initialConfig[k] = false;
-                    // handle case where backend sends boolean as string
-                    if (initialConfig[k] === 'false') initialConfig[k] = false; 
-                });
 
                 // Delete the fake Layout object if it was accidentally created before
                 if (initialConfig.Layout) delete initialConfig.Layout;
