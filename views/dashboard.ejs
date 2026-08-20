@@ -76,9 +76,6 @@
                 <div class="nav-item" :class="{active: activeMenu === 'servers'}" @click="setMenu('servers')">
                     🖥️ Servidores
                 </div>
-                <div class="nav-item" :class="{active: activeMenu === 'networks'}" @click="setMenu('networks')">
-                    🌐 Redes / Payloads
-                </div>
                 <div class="nav-item" :class="{active: activeMenu === 'raw'}" @click="setMenu('raw')">
                     📝 Editor JSON Bruto
                 </div>
@@ -119,10 +116,6 @@
                     <div class="config-card">
                         <h4 style="color: #fff; margin-bottom: 0.5rem;">Total de Servidores</h4>
                         <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">{{ config.Servers.length }}</div>
-                    </div>
-                    <div class="config-card">
-                        <h4 style="color: #fff; margin-bottom: 0.5rem;">Total de Redes</h4>
-                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">{{ config.Networks.length }}</div>
                     </div>
                     <div class="config-card">
                         <h4 style="color: #fff; margin-bottom: 0.5rem;">Versão da Config</h4>
@@ -344,33 +337,6 @@
                 </div>
             </div>
 
-            <!-- Networks Section -->
-            <div v-show="activeMenu === 'networks'">
-                <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h1 class="page-title">Redes / Payloads</h1>
-                        <p class="text-muted">Gerencie payloads e configurações de operadoras.</p>
-                    </div>
-                    <button class="btn primary" @click="addNetwork">＋ Nova Rede</button>
-                </div>
-                
-                <div class="list-container">
-                    <div class="list-item" v-for="(net, index) in config.Networks" :key="index" @click="editItem('Networks', index)">
-                        <div class="list-item-content">
-                            <div class="list-item-title">{{ net.Name || 'Rede Sem Nome' }}</div>
-                            <div class="list-item-subtitle">SNI: {{ net.SNI || 'Vazio' }} &nbsp;|&nbsp; Proxy: {{ net.ProxyIP }}:{{ net.ProxyPort }}</div>
-                        </div>
-                        <div class="list-item-actions">
-                            <button class="action-icon-btn danger" @click.stop="removeNetwork(index)" title="Excluir">✖</button>
-                        </div>
-                    </div>
-
-                    <div v-if="config.Networks.length === 0" class="text-muted" style="text-align: center; padding: 2rem;">
-                        Nenhuma rede encontrada. Clique em "Nova Rede" para adicionar.
-                    </div>
-                </div>
-            </div>
-
             <!-- Raw JSON Section -->
             <div v-show="activeMenu === 'raw'">
                 <div class="page-header">
@@ -384,7 +350,7 @@
             <div class="modal-overlay" v-if="modal.isOpen" @click.self="closeModal">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3>Editar {{ modal.type === 'Servers' ? 'Servidor' : 'Rede' }}</h3>
+                        <h3>Configuração de Servidor</h3>
                         <button class="modal-close" @click="closeModal">✖</button>
                     </div>
                     <div class="modal-body">
@@ -392,8 +358,24 @@
                         <!-- Server Edit Fields -->
                         <div v-if="modal.type === 'Servers' && config.Servers[modal.index]">
                             <div class="form-group">
-                                <label>Nome do Servidor</label>
-                                <input type="text" v-model="config.Servers[modal.index].Name">
+                                <label>Modo de conexão</label>
+                                <select v-model="config.Servers[modal.index].Mode">
+                                    <option v-for="mode in connectionModes" :key="mode" :value="mode">{{ mode }}</option>
+                                </select>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>Nome da configuração</label>
+                                    <input type="text" v-model="config.Servers[modal.index].Name">
+                                </div>
+                                <div>
+                                    <label>Descrição</label>
+                                    <input type="text" v-model="config.Servers[modal.index].Description">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Categoria</label>
+                                <input type="text" v-model="config.Servers[modal.index].Category" placeholder="Ex.: VIVO PRÉ">
                             </div>
                             <div class="form-group grid-col-2">
                                 <div>
@@ -467,39 +449,82 @@
                                     <input type="text" v-model="config.Servers[modal.index].ColorDescription" placeholder="#ffffff">
                                 </div>
                             </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>DNS 1</label>
+                                    <input type="text" v-model="config.Servers[modal.index].DNS1">
+                                </div>
+                                <div>
+                                    <label>DNS 2</label>
+                                    <input type="text" v-model="config.Servers[modal.index].DNS2">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Portas UDP</label>
+                                <input type="text" v-model="config.Servers[modal.index].UDPPorts" placeholder="7300">
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>Nome de usuário</label>
+                                    <input type="text" v-model="config.Servers[modal.index].USER">
+                                </div>
+                                <div>
+                                    <label>Senha</label>
+                                    <input type="password" v-model="config.Servers[modal.index].PASS">
+                                </div>
+                            </div>
+                            <div v-if="['SSL_DIRECT','SSL_PROXY','OVPN_SSL','OVPN_SSL_PROXY'].includes(config.Servers[modal.index].Mode)" class="form-group">
+                                <label>Versão TLS</label>
+                                <select v-model="config.Servers[modal.index].TLSVersion">
+                                    <option value="TLSv1.3">TLSv1.3</option>
+                                    <option value="TLSv1.2">TLSv1.2</option>
+                                    <option value="TLSv1.1">TLSv1.1</option>
+                                </select>
+                            </div>
+                            <div v-if="config.Servers[modal.index].Mode === 'OVPN_PROXY' || config.Servers[modal.index].Mode === 'OVPN_SSL' || config.Servers[modal.index].Mode === 'OVPN_SSL_PROXY'" class="form-group">
+                                <label>Configuração OpenVPN</label>
+                                <textarea v-model="config.Servers[modal.index].OpenVPNConfig" placeholder="Cole a configuração OpenVPN"></textarea>
+                            </div>
+                            <div v-if="config.Servers[modal.index].Mode === 'V2RAY'" class="form-group">
+                                <label>Configuração V2Ray</label>
+                                <textarea v-model="config.Servers[modal.index].V2RayConfig" placeholder="Cole a configuração V2Ray"></textarea>
+                                <label style="margin-top: .75rem;">UUID V2Ray</label>
+                                <input type="text" v-model="config.Servers[modal.index].UUID">
+                            </div>
+                            <div v-if="config.Servers[modal.index].Mode === 'SSH_DNSTT'" class="form-group grid-col-2">
+                                <div>
+                                    <label>Chave DNS.TT</label>
+                                    <input type="text" v-model="config.Servers[modal.index].DNSTTKey">
+                                </div>
+                                <div>
+                                    <label>Nameserver DNS.TT</label>
+                                    <input type="text" v-model="config.Servers[modal.index].DNSTTNameServer">
+                                </div>
+                                <div>
+                                    <label>Servidor DNS.TT</label>
+                                    <input type="text" v-model="config.Servers[modal.index].DNSTTServer">
+                                </div>
+                            </div>
+                            <div v-if="config.Servers[modal.index].Mode === 'HYSTERIA'" class="form-group grid-col-2">
+                                <div>
+                                    <label>Porta Hysteria</label>
+                                    <input type="text" v-model="config.Servers[modal.index].HyPort">
+                                </div>
+                                <div>
+                                    <label>Obfs</label>
+                                    <input type="text" v-model="config.Servers[modal.index].HyObfs">
+                                </div>
+                                <div>
+                                    <label>Upload Mbps</label>
+                                    <input type="number" v-model="config.Servers[modal.index].HyUpMbps">
+                                </div>
+                                <div>
+                                    <label>Download Mbps</label>
+                                    <input type="number" v-model="config.Servers[modal.index].HyDownMbps">
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Network Edit Fields -->
-                        <div v-if="modal.type === 'Networks' && config.Networks[modal.index]">
-                            <div class="form-group">
-                                <label>Nome da Rede</label>
-                                <input type="text" v-model="config.Networks[modal.index].Name">
-                            </div>
-                            <div class="form-group">
-                                <label>Payload</label>
-                                <textarea v-model="config.Networks[modal.index].Payload"></textarea>
-                            </div>
-                            <div class="form-group grid-col-2">
-                                <div>
-                                    <label>SNI (Bug Host)</label>
-                                    <input type="text" v-model="config.Networks[modal.index].SNI">
-                                </div>
-                                <div>
-                                    <label>Bandeira / Ícone</label>
-                                    <input type="text" v-model="config.Networks[modal.index].FLAG">
-                                </div>
-                            </div>
-                            <div class="form-group grid-col-2">
-                                <div>
-                                    <label>IP do Proxy</label>
-                                    <input type="text" v-model="config.Networks[modal.index].ProxyIP">
-                                </div>
-                                <div>
-                                    <label>Porta do Proxy</label>
-                                    <input type="text" v-model="config.Networks[modal.index].ProxyPort">
-                                </div>
-                            </div>
-                        </div>
 
                     </div>
                     <div class="modal-footer">
@@ -535,9 +560,15 @@
 
                 // Compatibilidade: adiciona os campos do ConnectPlus aos servidores antigos.
                 const serverDefaults = {
-                    Info: 'Tlsws', Description: '', ColorName: '#ffffff',
+                    Mode: 'SSH_DIRECT', Category: '', Info: 'Tlsws',
+                    Description: '', ColorName: '#ffffff',
                     ColorDescription: '#ffffff', Color: '#0000ff', Payload: '',
-                    ProxyIP: '', ProxyPort: '443', SNI: '', Path: ''
+                    ProxyIP: '', ProxyPort: '443', SNI: '', Path: '',
+                    DNS1: '9.9.9.9', DNS2: '9.9.9.9', UDPPorts: '7300',
+                    TLSVersion: 'TLSv1.2', OpenVPNConfig: '', V2RayConfig: '',
+                    UUID: '', DNSTTKey: '', DNSTTNameServer: '', DNSTTServer: '',
+                    HyObfs: '', HyInsecure: false, HyPort: '443',
+                    HyUpMbps: '100', HyDownMbps: '150', HyVersion: '1'
                 };
                 initialConfig.Servers = initialConfig.Servers.map(server => Object.assign(
                     {}, serverDefaults, server,
@@ -570,6 +601,12 @@
                 
                 return {
                     activeMenu: localStorage.getItem('activeMenu') || 'dashboard',
+                    connectionModes: [
+                        'SSH_DIRECT', 'SSH_PROXY', 'SSH_DNSTT',
+                        'SSL_DIRECT', 'SSL_PROXY',
+                        'OVPN_PROXY', 'OVPN_SSL', 'OVPN_SSL_PROXY',
+                        'V2RAY', 'HYSTERIA'
+                    ],
                     config: initialConfig,
                     modal: {
                         isOpen: false,
@@ -633,8 +670,10 @@
                 },
                 addServer() {
                     this.config.Servers.push({
-                        Name: "Novo Servidor",
+                        Name: "Nova Configuração",
                         TYPE: "premium",
+                        Mode: "SSH_DIRECT",
+                        Category: "",
                         Info: "Tlsws",
                         Description: "",
                         ColorName: "#ffffff",
@@ -660,27 +699,6 @@
                         this.config.Servers.splice(idx, 1);
                     }
                 },
-                addNetwork() {
-                    this.config.Networks.push({
-                        Name: "Nova Rede",
-                        FLAG: "vivo",
-                        Payload: "[split]GET / HTTP/1.1\\r\\nHost: domain.com\\r\\n\\r\\n",
-                        SNI: "",
-                        TlsIP: "",
-                        ProxyIP: "[app_host]",
-                        ProxyPort: "80",
-                        SlowChave: "",
-                        SlowNameServer: "",
-                        SlowDns: "",
-                        Info: "Proxy"
-                    });
-                    this.editItem('Networks', this.config.Networks.length - 1);
-                },
-                removeNetwork(idx) {
-                    if (confirm("Tem certeza que deseja excluir esta rede?")) {
-                        this.config.Networks.splice(idx, 1);
-                    }
-                }
             }
         }).mount('#app')
 
