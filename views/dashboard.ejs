@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel - C5GMOD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        .color-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .color-control label {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        .color-control input[type="color"] {
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 0;
+            background: transparent;
+        }
+        .section-title {
+            font-size: 1.1rem;
+            color: var(--primary);
+            margin: 1.5rem 0 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="dashboard-body">
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <div class="brand"><span>🚀</span> C5GMOD</div>
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+    </header>
+
+    <div id="app" style="display: flex; width: 100%;">
+        
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="brand" style="justify-content: space-between;">
+                <div><span>🚀</span> C5GMOD</div>
+                <button class="menu-toggle" style="display: none; padding-right:0;" onclick="toggleSidebar()" id="closeMenuBtn">✖</button>
+            </div>
+            
+            <div class="menu-label">Navegação</div>
+            <nav class="nav-menu">
+                <div class="nav-item" :class="{active: activeMenu === 'dashboard'}" @click="setMenu('dashboard')">
+                    📊 Visão Geral
+                </div>
+                <div class="nav-item" :class="{active: activeMenu === 'general'}" @click="setMenu('general')">
+                    ⚙️ Configurações Gerais
+                </div>
+                <div class="nav-item" :class="{active: activeMenu === 'layout'}" @click="setMenu('layout')">
+                    🎨 Layout e Cores
+                </div>
+                <div class="nav-item" :class="{active: activeMenu === 'servers'}" @click="setMenu('servers')">
+                    🖥️ Servidores
+                </div>
+                <div class="nav-item" :class="{active: activeMenu === 'networks'}" @click="setMenu('networks')">
+                    🌐 Redes / Payloads
+                </div>
+                <div class="nav-item" :class="{active: activeMenu === 'raw'}" @click="setMenu('raw')">
+                    📝 Editor JSON Bruto
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar"><%= user.username.charAt(0).toUpperCase() %></div>
+                    <div>
+                        <div style="font-weight: 600; color: #fff;"><%= user.username %></div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Administrador</div>
+                    </div>
+                </div>
+                <a href="/logout" class="btn danger full-width small" style="margin-top: 0.5rem;">Sair</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            
+            <!-- Dashboard Section -->
+            <div v-show="activeMenu === 'dashboard'">
+                <div class="page-header">
+                    <h1 class="page-title">Visão Geral do Painel</h1>
+                    <p class="text-muted">Gerencie suas configurações remotas.</p>
+                </div>
+                
+                <div class="glass-container config-card" style="margin-bottom: 2rem;">
+                    <h3 style="margin-bottom: 1rem; color: #fff;">Sua URL de Sincronização</h3>
+                    <p class="text-muted" style="margin-bottom: 1rem;">Cole esta URL no campo "Update URL" do seu aplicativo Conecta5G para sincronizar as configurações.</p>
+                    <div class="url-box" style="margin-bottom: 0;">
+                        <input type="text" readonly value="<%= appUrl %>" id="configUrl">
+                        <button onclick="copyUrl()" class="btn secondary">Copiar</button>
+                    </div>
+                </div>
+
+                <div class="card-grid">
+                    <div class="config-card">
+                        <h4 style="color: #fff; margin-bottom: 0.5rem;">Total de Servidores</h4>
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">{{ config.Servers.length }}</div>
+                    </div>
+                    <div class="config-card">
+                        <h4 style="color: #fff; margin-bottom: 0.5rem;">Total de Redes</h4>
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">{{ config.Networks.length }}</div>
+                    </div>
+                    <div class="config-card">
+                        <h4 style="color: #fff; margin-bottom: 0.5rem;">Versão da Config</h4>
+                        <div style="font-size: 2.5rem; font-weight: 700; color: #10b981;">v{{ config.Version }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- General Section -->
+            <div v-show="activeMenu === 'general'">
+                <div class="page-header">
+                    <h1 class="page-title">Configurações Gerais</h1>
+                    <p class="text-muted">Configurações globais do aplicativo.</p>
+                </div>
+                
+                <div class="glass-container config-card">
+                    <div class="card-grid" style="grid-template-columns: 1fr;">
+                        <div class="form-group">
+                            <label>Versão da Configuração (Aumente para forçar atualização)</label>
+                            <input type="number" v-model="config.Version">
+                        </div>
+                        <div class="form-group">
+                            <label>URL de Atualização (Fixo)</label>
+                            <input type="text" v-model="config.UrlUpdate" readonly style="background-color: rgba(255,255,255,0.05); color: #888; cursor: not-allowed;">
+                        </div>
+                        <div class="form-group">
+                            <label>Notas de Lançamento</label>
+                            <input type="text" v-model="config.ReleaseNotes">
+                        </div>
+                        <div class="form-group">
+                            <label>URL do SMS</label>
+                            <input type="text" v-model="config.Sms">
+                        </div>
+                        <div class="form-group">
+                            <label>Check User (Ativar/Desativar ou URL)</label>
+                            <input type="text" v-model="config.CheckUser">
+                        </div>
+                        <div class="form-group">
+                            <label>DNS Primário</label>
+                            <input type="text" v-model="config.DnsPrimario">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Layout Section -->
+            <div v-show="activeMenu === 'layout'">
+                <div class="page-header">
+                    <h1 class="page-title">Layout e Cores</h1>
+                    <p class="text-muted">Personalize links, imagens e cores do aplicativo.</p>
+                </div>
+                
+                <div class="glass-container config-card">
+                    
+                    <h3 class="section-title" style="margin-top:0;">Imagens e Fundos</h3>
+                    <div class="card-grid">
+                        <div class="form-group">
+                            <label>Logo Online (URL)</label>
+                            <input type="text" v-model="config.logoonline" placeholder="https://i.ibb.co/...">
+                        </div>
+                        <div class="form-group">
+                            <label>Fundo Online (Background URL)</label>
+                            <input type="text" v-model="config.fundoonline" placeholder="https://i.ibb.co/...">
+                        </div>
+                        <div class="form-group">
+                            <label>Banner Rodapé Online (URL)</label>
+                            <input type="text" v-model="config.banneRodapeOnline">
+                        </div>
+                        <div class="form-group">
+                            <label>Fundo do Log Online (URL)</label>
+                            <input type="text" v-model="config.fundoDoLogOnline">
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Links e Contatos</h3>
+                    <div class="card-grid">
+                        <div class="form-group">
+                            <label>Email de Feedback</label>
+                            <input type="text" v-model="config.EmailFeedback">
+                        </div>
+                        <div class="form-group">
+                            <label>URL de Contato</label>
+                            <input type="text" v-model="config.UrlContato">
+                        </div>
+                        <div class="form-group">
+                            <label>URL de Termos</label>
+                            <input type="text" v-model="config.UrlTermos">
+                        </div>
+                        <div class="form-group">
+                            <label>Link Whatsapp Modder</label>
+                            <input type="text" v-model="config.ModderLinkWhatsapp">
+                        </div>
+                        <div class="form-group">
+                            <label>Link Telegram Modder</label>
+                            <input type="text" v-model="config.ModderLinkTelegram">
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Personalização de Cores Modder</h3>
+                    <p class="text-muted" style="margin-bottom: 1rem; font-size: 0.85rem;">Marque a caixa para ativar a cor personalizada. Se desmarcado, usará a cor padrão (false).</p>
+                    
+                    <div class="card-grid">
+                        <!-- Color Pickers list -->
+                        <div class="color-control">
+                            <label>
+                                <input type="checkbox" :checked="config.ModderCorCaixaServ !== false && config.ModderCorCaixaServ !== 'false'" @change="e => config.ModderCorCaixaServ = e.target.checked ? '#3b82f6' : false">
+                                Cor da Caixa Servidor
+                            </label>
+                            <input type="color" v-if="config.ModderCorCaixaServ !== false && config.ModderCorCaixaServ !== 'false'" v-model="config.ModderCorCaixaServ">
+                        </div>
+                        
+                        <div class="color-control">
+                            <label>
+                                <input type="checkbox" :checked="config.ModderCorCaixaPay !== false && config.ModderCorCaixaPay !== 'false'" @change="e => config.ModderCorCaixaPay = e.target.checked ? '#3b82f6' : false">
+                                Cor da Caixa Pay
+                            </label>
+                            <input type="color" v-if="config.ModderCorCaixaPay !== false && config.ModderCorCaixaPay !== 'false'" v-model="config.ModderCorCaixaPay">
+                        </div>
+
+                        <div class="color-control">
+                            <label>
+                                <input type="checkbox" :checked="config.ModderCorCaixaCentral !== false && config.ModderCorCaixaCentral !== 'false'" @change="e => config.ModderCorCaixaCentral = e.target.checked ? '#3b82f6' : false">
+                                Cor da Caixa Central
+                            </label>
+                            <input type="color" v-if="config.ModderCorCaixaCentral !== false && config.ModderCorCaixaCentral !== 'false'" v-model="config.ModderCorCaixaCentral">
+                        </div>
+
+                        <div class="color-control">
+                            <label>
+                                <input type="checkbox" :checked="config.ModderCorCaixaConexao !== false && config.ModderCorCaixaConexao !== 'false'" @change="e => config.ModderCorCaixaConexao = e.target.checked ? '#3b82f6' : false">
+                                Cor da Caixa Conexão
+                            </label>
+                            <input type="color" v-if="config.ModderCorCaixaConexao !== false && config.ModderCorCaixaConexao !== 'false'" v-model="config.ModderCorCaixaConexao">
+                        </div>
+
+                        <div class="color-control">
+                            <label>
+                                <input type="checkbox" :checked="config.ModderCorCaixaRegistro !== false && config.ModderCorCaixaRegistro !== 'false'" @change="e => config.ModderCorCaixaRegistro = e.target.checked ? '#3b82f6' : false">
+                                Cor da Caixa Registro
+                            </label>
+                            <input type="color" v-if="config.ModderCorCaixaRegistro !== false && config.ModderCorCaixaRegistro !== 'false'" v-model="config.ModderCorCaixaRegistro">
+                        </div>
+
+                        <div class="color-control">
+                            <label>
+                                <input type="checkbox" :checked="config.ModderCorCaixaFerramentas !== false && config.ModderCorCaixaFerramentas !== 'false'" @change="e => config.ModderCorCaixaFerramentas = e.target.checked ? '#3b82f6' : false">
+                                Cor da Caixa Ferramentas
+                            </label>
+                            <input type="color" v-if="config.ModderCorCaixaFerramentas !== false && config.ModderCorCaixaFerramentas !== 'false'" v-model="config.ModderCorCaixaFerramentas">
+                        </div>
+
+                        <div class="color-control">
+                            <label>
+                                <input type="checkbox" :checked="config.ModderCorCaixaUsuario !== false && config.ModderCorCaixaUsuario !== 'false'" @change="e => config.ModderCorCaixaUsuario = e.target.checked ? '#3b82f6' : false">
+                                Cor da Caixa Usuário
+                            </label>
+                            <input type="color" v-if="config.ModderCorCaixaUsuario !== false && config.ModderCorCaixaUsuario !== 'false'" v-model="config.ModderCorCaixaUsuario">
+                        </div>
+
+                        <div class="color-control">
+                            <label>
+                                <input type="checkbox" :checked="config.ModderCorCaixaSenha !== false && config.ModderCorCaixaSenha !== 'false'" @change="e => config.ModderCorCaixaSenha = e.target.checked ? '#3b82f6' : false">
+                                Cor da Caixa Senha
+                            </label>
+                            <input type="color" v-if="config.ModderCorCaixaSenha !== false && config.ModderCorCaixaSenha !== 'false'" v-model="config.ModderCorCaixaSenha">
+                        </div>
+
+                        <div class="color-control">
+                            <label>
+                                <input type="checkbox" :checked="config.ModderCorBotaoIniciar !== false && config.ModderCorBotaoIniciar !== 'false'" @change="e => config.ModderCorBotaoIniciar = e.target.checked ? '#3b82f6' : false">
+                                Cor do Botão Iniciar
+                            </label>
+                            <input type="color" v-if="config.ModderCorBotaoIniciar !== false && config.ModderCorBotaoIniciar !== 'false'" v-model="config.ModderCorBotaoIniciar">
+                        </div>
+
+                        <div class="color-control">
+                            <label>
+                                <input type="checkbox" :checked="config.ModderCorBotaoLog !== false && config.ModderCorBotaoLog !== 'false'" @change="e => config.ModderCorBotaoLog = e.target.checked ? '#3b82f6' : false">
+                                Cor do Botão Log
+                            </label>
+                            <input type="color" v-if="config.ModderCorBotaoLog !== false && config.ModderCorBotaoLog !== 'false'" v-model="config.ModderCorBotaoLog">
+                        </div>
+
+                        <div class="color-control">
+                            <label>
+                                <input type="checkbox" :checked="config.ModderCorBotaoConfig !== false && config.ModderCorBotaoConfig !== 'false'" @change="e => config.ModderCorBotaoConfig = e.target.checked ? '#3b82f6' : false">
+                                Cor do Botão Config
+                            </label>
+                            <input type="color" v-if="config.ModderCorBotaoConfig !== false && config.ModderCorBotaoConfig !== 'false'" v-model="config.ModderCorBotaoConfig">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Servers Section -->
+            <div v-show="activeMenu === 'servers'">
+                <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 class="page-title">Servidores</h1>
+                        <p class="text-muted">Gerencie seus servidores e IPs.</p>
+                    </div>
+                    <button class="btn primary" @click="addServer">＋ Novo Servidor</button>
+                </div>
+                
+                <div class="list-container">
+                    <div class="list-item" v-for="(srv, index) in config.Servers" :key="index" @click="editItem('Servers', index)">
+                        <div class="list-item-content">
+                            <div class="list-item-title">{{ srv.Name || 'Servidor Sem Nome' }}</div>
+                            <div class="list-item-subtitle">{{ srv.ServerIP }} : {{ srv.ServerPort }} &nbsp;|&nbsp; {{ srv.TYPE }}</div>
+                        </div>
+                        <div class="list-item-actions">
+                            <button class="action-icon-btn danger" @click.stop="removeServer(index)" title="Excluir">✖</button>
+                        </div>
+                    </div>
+                    
+                    <div v-if="config.Servers.length === 0" class="text-muted" style="text-align: center; padding: 2rem;">
+                        Nenhum servidor encontrado. Clique em "Novo Servidor" para adicionar.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Networks Section -->
+            <div v-show="activeMenu === 'networks'">
+                <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 class="page-title">Redes / Payloads</h1>
+                        <p class="text-muted">Gerencie payloads e configurações de operadoras.</p>
+                    </div>
+                    <button class="btn primary" @click="addNetwork">＋ Nova Rede</button>
+                </div>
+                
+                <div class="list-container">
+                    <div class="list-item" v-for="(net, index) in config.Networks" :key="index" @click="editItem('Networks', index)">
+                        <div class="list-item-content">
+                            <div class="list-item-title">{{ net.Name || 'Rede Sem Nome' }}</div>
+                            <div class="list-item-subtitle">SNI: {{ net.SNI || 'Vazio' }} &nbsp;|&nbsp; Proxy: {{ net.ProxyIP }}:{{ net.ProxyPort }}</div>
+                        </div>
+                        <div class="list-item-actions">
+                            <button class="action-icon-btn danger" @click.stop="removeNetwork(index)" title="Excluir">✖</button>
+                        </div>
+                    </div>
+
+                    <div v-if="config.Networks.length === 0" class="text-muted" style="text-align: center; padding: 2rem;">
+                        Nenhuma rede encontrada. Clique em "Nova Rede" para adicionar.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Raw JSON Section -->
+            <div v-show="activeMenu === 'raw'">
+                <div class="page-header">
+                    <h1 class="page-title">JSON Bruto</h1>
+                    <p class="text-muted">Editor avançado para desenvolvedores e ajustes manuais.</p>
+                </div>
+                <textarea id="jsonEditor" spellcheck="false" :value="jsonString" @input="updateFromJson"></textarea>
+            </div>
+
+            <!-- Modal for Editing Server/Network -->
+            <div class="modal-overlay" v-if="modal.isOpen" @click.self="closeModal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Editar {{ modal.type === 'Servers' ? 'Servidor' : 'Rede' }}</h3>
+                        <button class="modal-close" @click="closeModal">✖</button>
+                    </div>
+                    <div class="modal-body">
+                        
+                        <!-- Server Edit Fields -->
+                        <div v-if="modal.type === 'Servers' && config.Servers[modal.index]">
+                            <div class="form-group">
+                                <label>Nome do Servidor</label>
+                                <input type="text" v-model="config.Servers[modal.index].Name">
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>IP / Host do Servidor</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ServerIP">
+                                </div>
+                                <div>
+                                    <label>Ícone da Bandeira</label>
+                                    <input type="text" v-model="config.Servers[modal.index].FLAG">
+                                </div>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>Porta (SSH)</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ServerPort">
+                                </div>
+                                <div>
+                                    <label>Porta (SSL)</label>
+                                    <input type="text" v-model="config.Servers[modal.index].SSLPort">
+                                </div>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>Tipo (Ex: premium)</label>
+                                    <input type="text" v-model="config.Servers[modal.index].TYPE">
+                                </div>
+                                <div>
+                                    <label>URL Check User</label>
+                                    <input type="text" v-model="config.Servers[modal.index].CheckUser">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Network Edit Fields -->
+                        <div v-if="modal.type === 'Networks' && config.Networks[modal.index]">
+                            <div class="form-group">
+                                <label>Nome da Rede</label>
+                                <input type="text" v-model="config.Networks[modal.index].Name">
+                            </div>
+                            <div class="form-group">
+                                <label>Payload</label>
+                                <textarea v-model="config.Networks[modal.index].Payload"></textarea>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>SNI (Bug Host)</label>
+                                    <input type="text" v-model="config.Networks[modal.index].SNI">
+                                </div>
+                                <div>
+                                    <label>Bandeira / Ícone</label>
+                                    <input type="text" v-model="config.Networks[modal.index].FLAG">
+                                </div>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>IP do Proxy</label>
+                                    <input type="text" v-model="config.Networks[modal.index].ProxyIP">
+                                </div>
+                                <div>
+                                    <label>Porta do Proxy</label>
+                                    <input type="text" v-model="config.Networks[modal.index].ProxyPort">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn primary" @click="closeModal">Concluir</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Save Bar -->
+            <div class="floating-save-bar">
+                <div style="margin: 0; width: 100%; display: flex; justify-content: flex-end; align-items: center; gap: 1rem;">
+                    <span v-if="saveStatus" style="color: #10b981; font-weight: 600;">{{ saveStatus }}</span>
+                    <button @click="saveConfig" :disabled="isSaving" class="btn primary full-width-mobile" style="box-shadow: 0 4px 14px 0 rgba(59,130,246,0.39);">
+                        {{ isSaving ? 'Salvando...' : 'Salvar Configurações' }}
+                    </button>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+    <script>
+        const initialConfig = <%- configStr %>;
+
+        const appUrl = "<%= appUrl %>";
+
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                if (!initialConfig.Networks) initialConfig.Networks = [];
+                if (!initialConfig.Servers) initialConfig.Servers = [];
+                
+                // Force UrlUpdate to always be the user's unique config URL
+                initialConfig.UrlUpdate = appUrl;
+                
+                // Initialize text layout keys
+                const stringKeys = ['logoonline', 'fundoonline', 'banneRodapeOnline', 'fundoDoLogOnline', 'EmailFeedback', 'UrlContato', 'UrlTermos', 'ModderLinkWhatsapp', 'ModderLinkTelegram'];
+                stringKeys.forEach(k => {
+                    if (initialConfig[k] === undefined) initialConfig[k] = "";
+                });
+
+                // Initialize color boolean/string keys
+                const colorKeys = [
+                    'ModderCorCaixaServ', 'ModderCorCaixaPay', 'ModderCorCaixaCentral', 'ModderCorCaixaConexao', 
+                    'ModderCorCaixaRegistro', 'ModderCorCaixaFerramentas', 'ModderCorCaixaUsuario', 
+                    'ModderCorCaixaSenha', 'ModderCorBotaoIniciar', 'ModderCorBotaoLog', 'ModderCorBotaoConfig'
+                ];
+                colorKeys.forEach(k => {
+                    if (initialConfig[k] === undefined) initialConfig[k] = false;
+                    // handle case where backend sends boolean as string
+                    if (initialConfig[k] === 'false') initialConfig[k] = false; 
+                });
+
+                // Delete the fake Layout object if it was accidentally created before
+                if (initialConfig.Layout) delete initialConfig.Layout;
+                
+                return {
+                    activeMenu: localStorage.getItem('activeMenu') || 'dashboard',
+                    config: initialConfig,
+                    modal: {
+                        isOpen: false,
+                        type: '',
+                        index: -1
+                    },
+                    isSaving: false,
+                    saveStatus: ''
+                }
+            },
+            computed: {
+                jsonString() {
+                    return JSON.stringify(this.config, null, 4);
+                }
+            },
+            methods: {
+                setMenu(menu) {
+                    this.activeMenu = menu;
+                    localStorage.setItem('activeMenu', menu);
+                    if (window.innerWidth <= 768) {
+                        toggleSidebar();
+                    }
+                },
+                async saveConfig() {
+                    this.isSaving = true;
+                    this.saveStatus = '';
+                    try {
+                        const response = await fetch('/dashboard/save', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ config_json: this.jsonString })
+                        });
+                        if (response.ok) {
+                            this.saveStatus = '✅ Salvo com sucesso!';
+                            setTimeout(() => { this.saveStatus = ''; }, 3000);
+                        } else {
+                            alert('Erro ao salvar as configurações no servidor.');
+                        }
+                    } catch (e) {
+                        alert('Erro de conexão ao tentar salvar.');
+                    } finally {
+                        this.isSaving = false;
+                    }
+                },
+                updateFromJson(e) {
+                    try {
+                        this.config = JSON.parse(e.target.value);
+                    } catch(err) {
+                        // ignore parsing errors while typing
+                    }
+                },
+                editItem(type, index) {
+                    this.modal.type = type;
+                    this.modal.index = index;
+                    this.modal.isOpen = true;
+                },
+                closeModal() {
+                    this.modal.isOpen = false;
+                },
+                addServer() {
+                    this.config.Servers.push({
+                        Name: "Novo Servidor",
+                        TYPE: "premium",
+                        FLAG: "br.png",
+                        ServerIP: "0.0.0.0",
+                        CheckUser: "http://",
+                        ServerPort: "22",
+                        SSLPort: "443",
+                        USER: "",
+                        PASS: ""
+                    });
+                    this.editItem('Servers', this.config.Servers.length - 1);
+                },
+                removeServer(idx) {
+                    if (confirm("Tem certeza que deseja excluir este servidor?")) {
+                        this.config.Servers.splice(idx, 1);
+                    }
+                },
+                addNetwork() {
+                    this.config.Networks.push({
+                        Name: "Nova Rede",
+                        FLAG: "vivo",
+                        Payload: "[split]GET / HTTP/1.1\\r\\nHost: domain.com\\r\\n\\r\\n",
+                        SNI: "",
+                        TlsIP: "",
+                        ProxyIP: "[app_host]",
+                        ProxyPort: "80",
+                        SlowChave: "",
+                        SlowNameServer: "",
+                        SlowDns: "",
+                        Info: "Proxy"
+                    });
+                    this.editItem('Networks', this.config.Networks.length - 1);
+                },
+                removeNetwork(idx) {
+                    if (confirm("Tem certeza que deseja excluir esta rede?")) {
+                        this.config.Networks.splice(idx, 1);
+                    }
+                }
+            }
+        }).mount('#app')
+
+        function copyUrl() {
+            var copyText = document.getElementById("configUrl");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            document.execCommand("copy");
+            
+            const btn = document.querySelector('.url-box .btn');
+            btn.textContent = 'Copiado!';
+            setTimeout(() => btn.textContent = 'Copiar', 2000);
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const closeBtn = document.getElementById('closeMenuBtn');
+            sidebar.classList.toggle('open');
+            if(window.innerWidth <= 768) {
+                closeBtn.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+            }
+        }
+        
+        window.addEventListener('resize', () => {
+            const closeBtn = document.getElementById('closeMenuBtn');
+            if(window.innerWidth > 768) {
+                document.getElementById('sidebar').classList.remove('open');
+                closeBtn.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
