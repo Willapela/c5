@@ -451,15 +451,14 @@
                                     <input type="text" v-model="config.Servers[modal.index].ProxyPort">
                                 </div>
                             </div>
-                            <div v-if="['Ssl','Tlsws','XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
-                                <div>
-                                    <label>SNI / Bug Host</label>
-                                    <input type="text" v-model="config.Servers[modal.index].SNI">
-                                </div>
-                                <div>
-                                    <label>Path</label>
-                                    <input type="text" v-model="config.Servers[modal.index].Path" placeholder="/ssh">
-                                </div>
+                            <div v-if="['Ssl','Tlsws','XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group">
+                                <label>SNI / Bug Host</label>
+                                <input type="text" v-model="config.Servers[modal.index].SNI" placeholder="[app_host] ou domínio">
+                            </div>
+                            <div v-if="config.Servers[modal.index].Info === 'XHTTP'" class="form-group">
+                                <label>Path do XHTTP</label>
+                                <input type="text" v-model="config.Servers[modal.index].Path" placeholder="/ssh">
+                                <small class="text-muted">Este campo é usado somente pelo modo XHTTP.</small>
                             </div>
                             <div class="form-group grid-col-2">
                                 <div>
