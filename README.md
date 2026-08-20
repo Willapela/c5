@@ -12,7 +12,7 @@ cd c5g-panel-install
 bash install.sh
 ```
 
-Depois, abra `http://IP_DA_VPS:3000/register`, crie a primeira conta e faça login. Para produção, use HTTPS por meio de Nginx ou outro proxy reverso.
+Depois, abra `http://IP_DA_VPS:2000/register`, crie a primeira conta e faça login. Para produção, use HTTPS por meio de Nginx ou outro proxy reverso.
 
 ## Instalação manual
 

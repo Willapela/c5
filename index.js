@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 2000);
 const JWT_SECRET = 'super_secret_c5g_key_for_testing';
 
 app.use(express.urlencoded({ extended: true }));

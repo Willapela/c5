@@ -24,4 +24,4 @@ fi
 
 echo "Instalação concluída. Inicie com:"
 echo "  JWT_SECRET='sua-chave-secreta' node index.js"
-echo "Depois acesse: http://IP_DA_VPS:3000/register"
+echo "Depois acesse: http://IP_DA_VPS:2000/register"
