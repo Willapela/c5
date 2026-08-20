@@ -285,8 +285,9 @@ app.get('/dashboard', requireAuth, (req, res) => {
         user: req.user,
         configStr: JSON.stringify(parseUserConfig(user), null, 2),
         appUrl: `${hostUrl}/${encodeURIComponent(user.username)}/config`,
-        appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`,
-        themeUrl: `${hostUrl}/${encodeURIComponent(user.username)}/theme`
+            appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`,
+            smsUrl: `${hostUrl}/${encodeURIComponent(user.username)}/sms`,
+            themeUrl: `${hostUrl}/${encodeURIComponent(user.username)}/theme`
     });
 });
 
