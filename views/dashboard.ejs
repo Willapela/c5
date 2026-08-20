@@ -362,11 +362,29 @@
                                         <option value="TLSv1.1">TLSv1.1</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label>Info / Modo</label>
-                                    <select v-model="config.Servers[modal.index].Info">
-                                        <option v-for="mode in connectionModes" :value="mode">{{ mode }}</option>
-                                    </select>
+                                <div class="mode-picker-field full-width">
+                                    <div class="mode-picker-heading">
+                                        <div>
+                                            <label>Modo de conexão</label>
+                                            <small>Selecione como este servidor será usado pelo ConnectPlus.</small>
+                                        </div>
+                                        <span class="mode-current-badge">{{ config.Servers[modal.index].Info }}</span>
+                                    </div>
+                                    <div class="mode-picker" role="radiogroup" aria-label="Modo de conexão">
+                                        <button v-for="mode in connectionModes" :key="mode" type="button"
+                                            class="mode-option"
+                                            :class="{ active: config.Servers[modal.index].Info === mode }"
+                                            role="radio"
+                                            :aria-checked="config.Servers[modal.index].Info === mode"
+                                            @click="config.Servers[modal.index].Info = mode">
+                                            <span class="mode-option-icon">{{ mode === 'Tlsws' ? 'T' : mode === 'XHTTP' ? 'X' : mode === 'Ssl' ? 'S' : mode === 'Proxy' ? 'P' : 'D' }}</span>
+                                            <span class="mode-option-copy">
+                                                <strong>{{ mode }}</strong>
+                                                <small>{{ modeDescriptions[mode] }}</small>
+                                            </span>
+                                            <span class="mode-option-check">✓</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
