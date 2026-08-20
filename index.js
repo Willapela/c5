@@ -43,6 +43,17 @@ function buildUserConfig(req, username, user) {
     const base = requestBaseUrl(req);
     const configUrl = `${base}/${encodeURIComponent(username)}/config`;
     const smsUrl = `${base}/${encodeURIComponent(username)}/sms`;
+    const serverKeys = ['Name', 'ColorName', 'Description', 'ColorDescription', 'FLAG', 'ServerIP', 'ServerPort', 'CheckUser', 'USER', 'PASS', 'Payload', 'ProxyIP', 'ProxyPort', 'SNI', 'Path', 'Color', 'Info'];
+    if (Array.isArray(config.Servers)) {
+        config.Servers = config.Servers.map((server) => {
+            const clean = {};
+            serverKeys.forEach((key) => {
+                if (server[key] !== undefined) clean[key] = server[key];
+            });
+            if (!['Ssl', 'Direct', 'Proxy', 'Tlsws', 'XHTTP'].includes(clean.Info)) clean.Info = 'Tlsws';
+            return clean;
+        });
+    }
     config.UrlUpdate = configUrl;
     config.Update = configUrl;
     config.Sms = smsUrl;
@@ -142,27 +153,6 @@ const DEFAULT_CONFIG = {
         "ColorButtons": "#333333",
         "ImgUpdate": "https://i.imgur.com/CJFEvDW.png"
     },
-    "logoonline": "https://i.ibb.co/1GFWft65/ic-banner.png",
-    "fundoonline": "https://i.ibb.co/Pz189Nvw/77bb3128f92f68bbf7e4e38156078416.jpg",
-    "banneRodapeOnline": "",
-    "fundoDoLogOnline": "",
-    "EmailFeedback": "",
-    "UrlContato": "",
-    "UrlTermos": "",
-    "CheckUser": "false",
-    "ModderLinkWhatsapp": "",
-    "ModderLinkTelegram": "",
-    "ModderCorCaixaServ": false,
-    "ModderCorCaixaPay": false,
-    "ModderCorCaixaCentral": false,
-    "ModderCorCaixaConexao": false,
-    "ModderCorCaixaRegistro": false,
-    "ModderCorCaixaFerramentas": false,
-    "ModderCorCaixaUsuario": false,
-    "ModderCorCaixaSenha": false,
-    "ModderCorBotaoIniciar": false,
-    "ModderCorBotaoLog": false,
-    "ModderCorBotaoConfig": false,
     "DnsPrimario": "8.8.8.8",
     "DnsSecundario": "8.4.4.8",
     "Udp": [
@@ -170,29 +160,7 @@ const DEFAULT_CONFIG = {
             "Porta": "7300"
         }
     ],
-    "Servers": [
-        {
-            "Name": "Servidor Br 1",
-            "TYPE": "free",
-            "Info": "Tlsws",
-            "Description": "",
-            "ColorName": "#ffffff",
-            "ColorDescription": "#ffffff",
-            "Color": "#0000ff",
-            "FLAG": "br.png",
-            "ServerIP": "br1.beto02.shop",
-            "CheckUser": "http://",
-            "ServerPort": "443",
-            "SSLPort": "443",
-            "USER": "",
-            "PASS": "",
-            "Payload": "",
-            "ProxyIP": "",
-            "ProxyPort": "443",
-            "SNI": "",
-            "Path": ""
-        }
-    ]
+    "Servers": []
 };
 
 // Middleware to check authentication

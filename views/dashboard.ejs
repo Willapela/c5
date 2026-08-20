@@ -276,17 +276,13 @@
                             </div>
                             <div class="form-group grid-col-2">
                                 <div>
-                                    <label>Nome da configuração</label>
-                                    <input type="text" v-model="config.Servers[modal.index].Name">
+                                    <label>Nome</label>
+                                    <input type="text" v-model="config.Servers[modal.index].Name" placeholder="WILL">
                                 </div>
                                 <div>
                                     <label>Descrição</label>
-                                    <input type="text" v-model="config.Servers[modal.index].Description">
+                                    <input type="text" v-model="config.Servers[modal.index].Description" placeholder="T1M 01">
                                 </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Categoria</label>
-                                <input type="text" v-model="config.Servers[modal.index].Category" placeholder="Ex.: VIVO PRÉ">
                             </div>
                             <div class="form-group grid-col-2">
                                 <div>
@@ -294,74 +290,23 @@
                                     <input type="text" v-model="config.Servers[modal.index].ServerIP">
                                 </div>
                                 <div>
-                                    <label>Ícone da Bandeira</label>
-                                    <input type="text" v-model="config.Servers[modal.index].FLAG">
+                                    <label>Porta do Servidor</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ServerPort" placeholder="443">
                                 </div>
                             </div>
                             <div class="form-group grid-col-2">
                                 <div>
-                                    <label>Porta (SSH)</label>
-                                    <input type="text" v-model="config.Servers[modal.index].ServerPort">
+                                    <label>FLAG (URL)</label>
+                                    <input type="text" v-model="config.Servers[modal.index].FLAG" placeholder="https://.../bandeira.png">
                                 </div>
                                 <div>
-                                    <label>Porta (SSL)</label>
-                                    <input type="text" v-model="config.Servers[modal.index].SSLPort">
+                                    <label>URL Check User</label>
+                                    <input type="text" v-model="config.Servers[modal.index].CheckUser" placeholder="http://.../check?user={user}">
                                 </div>
-                            </div>
-                            <div class="form-group">
-                                <label>URL Check User</label>
-                                <input type="text" v-model="config.Servers[modal.index].CheckUser">
-                            </div>
-                            <div v-if="['Direct','Proxy','Ssl','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group">
-                                <label>Payload ([lf] para quebra de linha; # para múltiplos)</label>
-                                <textarea v-model="config.Servers[modal.index].Payload" placeholder="GET / HTTP/1.1[lf]Host: exemplo.com[lf][lf]"></textarea>
-                            </div>
-                            <div v-if="['Proxy','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
-                                <div>
-                                    <label>IP/Host do Proxy (# para múltiplos)</label>
-                                    <input type="text" v-model="config.Servers[modal.index].ProxyIP">
-                                </div>
-                                <div>
-                                    <label>Porta do Proxy</label>
-                                    <input type="text" v-model="config.Servers[modal.index].ProxyPort">
-                                </div>
-                            </div>
-                            <div v-if="['Ssl','Tlsws','XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group">
-                                <label>SNI / Bug Host</label>
-                                <input type="text" v-model="config.Servers[modal.index].SNI" placeholder="[app_host] ou domínio">
-                            </div>
-                            <div v-if="config.Servers[modal.index].Info === 'XHTTP'" class="form-group">
-                                <label>Path do XHTTP</label>
-                                <input type="text" v-model="config.Servers[modal.index].Path" placeholder="/ssh">
-                                <small class="text-muted">Este campo é usado somente pelo modo XHTTP.</small>
                             </div>
                             <div class="form-group grid-col-2">
                                 <div>
-                                    <label>Cor do nome</label>
-                                    <input type="text" v-model="config.Servers[modal.index].ColorName" placeholder="#ffffff">
-                                </div>
-                                <div>
-                                    <label>Cor da descrição</label>
-                                    <input type="text" v-model="config.Servers[modal.index].ColorDescription" placeholder="#ffffff">
-                                </div>
-                            </div>
-                            <div v-if="['XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
-                                <div>
-                                    <label>DNS 1</label>
-                                    <input type="text" v-model="config.Servers[modal.index].DNS1">
-                                </div>
-                                <div>
-                                    <label>DNS 2</label>
-                                    <input type="text" v-model="config.Servers[modal.index].DNS2">
-                                </div>
-                            </div>
-                            <div v-if="['XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group">
-                                <label>Portas UDP</label>
-                                <input type="text" v-model="config.Servers[modal.index].UDPPorts" placeholder="7300">
-                            </div>
-                            <div v-if="['Ssl','Direct','Proxy','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
-                                <div>
-                                    <label>Nome de usuário</label>
+                                    <label>Usuário</label>
                                     <input type="text" v-model="config.Servers[modal.index].USER">
                                 </div>
                                 <div>
@@ -369,54 +314,51 @@
                                     <input type="password" v-model="config.Servers[modal.index].PASS">
                                 </div>
                             </div>
-                            <div v-if="['Ssl','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group">
-                                <label>Versão TLS</label>
-                                <select v-model="config.Servers[modal.index].TLSVersion">
-                                    <option value="TLSv1.3">TLSv1.3</option>
-                                    <option value="TLSv1.2">TLSv1.2</option>
-                                    <option value="TLSv1.1">TLSv1.1</option>
-                                </select>
-                            </div>
-                            <div v-if="false" class="form-group">
-                                <label>Configuração OpenVPN</label>
-                                <textarea v-model="config.Servers[modal.index].OpenVPNConfig" placeholder="Cole a configuração OpenVPN"></textarea>
-                            </div>
-                            <div v-if="false" class="form-group">
-                                <label>Configuração V2Ray</label>
-                                <textarea v-model="config.Servers[modal.index].V2RayConfig" placeholder="Cole a configuração V2Ray"></textarea>
-                                <label style="margin-top: .75rem;">UUID V2Ray</label>
-                                <input type="text" v-model="config.Servers[modal.index].UUID">
-                            </div>
-                            <div v-if="false" class="form-group grid-col-2">
-                                <div>
-                                    <label>Chave DNS.TT</label>
-                                    <input type="text" v-model="config.Servers[modal.index].DNSTTKey">
-                                </div>
-                                <div>
-                                    <label>Nameserver DNS.TT</label>
-                                    <input type="text" v-model="config.Servers[modal.index].DNSTTNameServer">
-                                </div>
-                                <div>
-                                    <label>Servidor DNS.TT</label>
-                                    <input type="text" v-model="config.Servers[modal.index].DNSTTServer">
+                            <div v-if="['Direct','Proxy','Tlsws','XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
+                                <div class="grid-col-full">
+                                    <label>Payload</label>
+                                    <textarea v-model="config.Servers[modal.index].Payload" placeholder="GET /app8 HTTP/1.1[lf]Host: dominio.com[lf]Upgrade: websocket[lf][lf]"></textarea>
+                                    <small class="text-muted">Use [lf] para quebra de linha. O app usa exatamente o texto informado.</small>
                                 </div>
                             </div>
-                            <div v-if="false" class="form-group grid-col-2">
+                            <div v-if="['Proxy','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
                                 <div>
-                                    <label>Porta Hysteria</label>
-                                    <input type="text" v-model="config.Servers[modal.index].HyPort">
+                                    <label>ProxyIP</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ProxyIP" placeholder="IP ou host; use # para múltiplos">
                                 </div>
                                 <div>
-                                    <label>Obfs</label>
-                                    <input type="text" v-model="config.Servers[modal.index].HyObfs">
+                                    <label>ProxyPort</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ProxyPort" placeholder="443">
+                                </div>
+                            </div>
+                            <div v-if="['Ssl','Tlsws','XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group">
+                                <label>SNI</label>
+                                <input type="text" v-model="config.Servers[modal.index].SNI" placeholder="dominio.com">
+                            </div>
+                            <div v-if="config.Servers[modal.index].Info === 'XHTTP'" class="form-group">
+                                <label>Path</label>
+                                <input type="text" v-model="config.Servers[modal.index].Path" placeholder="/ssh">
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>ColorName</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ColorName" placeholder="#ffffff">
                                 </div>
                                 <div>
-                                    <label>Upload Mbps</label>
-                                    <input type="number" v-model="config.Servers[modal.index].HyUpMbps">
+                                    <label>ColorDescription</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ColorDescription" placeholder="#ffffff">
+                                </div>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>Color</label>
+                                    <input type="text" v-model="config.Servers[modal.index].Color" placeholder="#0000ff">
                                 </div>
                                 <div>
-                                    <label>Download Mbps</label>
-                                    <input type="number" v-model="config.Servers[modal.index].HyDownMbps">
+                                    <label>Info / Modo</label>
+                                    <select v-model="config.Servers[modal.index].Info">
+                                        <option v-for="mode in connectionModes" :value="mode">{{ mode }}</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -454,22 +396,21 @@
                 if (!initialConfig.Networks) initialConfig.Networks = [];
                 if (!initialConfig.Servers) initialConfig.Servers = [];
 
-                // Compatibilidade: adiciona os campos do ConnectPlus aos servidores antigos.
+                // Modelo exclusivo do ConnectPlus: somente estas chaves são entregues ao app.
                 const serverDefaults = {
-                    Mode: 'Direct', Category: '', Info: 'Direct',
-                    Description: '', ColorName: '#ffffff',
-                    ColorDescription: '#ffffff', Color: '#0000ff', Payload: '',
-                    ProxyIP: '', ProxyPort: '443', SNI: '', Path: '',
-                    DNS1: '9.9.9.9', DNS2: '9.9.9.9', UDPPorts: '7300',
-                    TLSVersion: 'TLSv1.2', OpenVPNConfig: '', V2RayConfig: '',
-                    UUID: '', DNSTTKey: '', DNSTTNameServer: '', DNSTTServer: '',
-                    HyObfs: '', HyInsecure: false, HyPort: '443',
-                    HyUpMbps: '100', HyDownMbps: '150', HyVersion: '1'
+                    Name: '', ColorName: '#ffffff', Description: '', ColorDescription: '#ffffff',
+                    FLAG: '', ServerIP: '', ServerPort: '443', CheckUser: '', USER: '', PASS: '',
+                    Payload: '', ProxyIP: '', ProxyPort: '443', SNI: '', Path: '',
+                    Color: '#0000ff', Info: 'Tlsws'
                 };
-                initialConfig.Servers = initialConfig.Servers.map(server => Object.assign(
-                    {}, serverDefaults, server,
-                    { Info: server.Info || server.TYPE || serverDefaults.Info }
-                ));
+                const connectPlusKeys = Object.keys(serverDefaults);
+                initialConfig.Servers = initialConfig.Servers.map(server => {
+                    const normalized = {};
+                    connectPlusKeys.forEach(key => { normalized[key] = server[key] ?? serverDefaults[key]; });
+                    normalized.Info = ['Ssl', 'Direct', 'Proxy', 'Tlsws', 'XHTTP'].includes(server.Info)
+                        ? server.Info : (['Ssl', 'Direct', 'Proxy', 'Tlsws', 'XHTTP'].includes(server.TYPE) ? server.TYPE : 'Tlsws');
+                    return normalized;
+                });
                 
                 // Force update URLs to always be the user's unique config URL.
                 initialConfig.UrlUpdate = appUrl;
@@ -579,26 +520,22 @@
                 addServer() {
                     this.config.Servers.push({
                         Name: "Nova Configuração",
-                        TYPE: "premium",
-                        Mode: "Direct",
-                        Category: "",
-                        Info: "Tlsws",
-                        Description: "",
                         ColorName: "#ffffff",
+                        Description: "",
                         ColorDescription: "#ffffff",
-                        Color: "#0000ff",
-                        FLAG: "br.png",
-                        ServerIP: "0.0.0.0",
-                        CheckUser: "http://",
+                        FLAG: "",
+                        ServerIP: "",
                         ServerPort: "443",
-                        SSLPort: "443",
+                        CheckUser: "",
                         USER: "",
                         PASS: "",
                         Payload: "",
                         ProxyIP: "",
                         ProxyPort: "443",
                         SNI: "",
-                        Path: ""
+                        Path: "",
+                        Color: "#0000ff",
+                        Info: "Tlsws"
                     });
                     this.editItem('Servers', this.config.Servers.length - 1);
                 },
