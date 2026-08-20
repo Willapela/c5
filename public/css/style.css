@@ -850,3 +850,21 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
         grid-template-columns: 1fr;
     }
 }
+
+.field-help {
+    display: block;
+    margin-top: 0.4rem;
+    color: #94a3b8;
+    font-size: 0.7rem;
+    line-height: 1.45;
+}
+
+.field-help code {
+    padding: 0.1rem 0.28rem;
+    border: 1px solid rgba(96, 165, 250, 0.2);
+    border-radius: 0.3rem;
+    background: rgba(15, 23, 42, 0.8);
+    color: #bfdbfe;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.68rem;
+}
