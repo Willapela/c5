@@ -1527,3 +1527,38 @@ body.dashboard-body {
         padding: 0.9rem;
     }
 }
+
+/* Mobile header menu control on the left */
+.mobile-header {
+    justify-content: flex-start;
+    gap: 0.7rem;
+}
+
+.mobile-menu-left {
+    order: 0;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid rgba(110,168,254,0.2);
+    border-radius: 10px;
+    background: rgba(110,168,254,0.08);
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.mobile-header .brand {
+    order: 1;
+}
+
+.mobile-header-spacer {
+    order: 2;
+    flex: 1;
+}
+
+@media (min-width: 769px) {
+    .mobile-menu-left,
+    .mobile-header-spacer {
+        display: none;
+    }
+}
