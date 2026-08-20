@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel - C5GMOD</title>
+    <title>ConnectPlus · C5G Panel</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -49,7 +49,7 @@
 
     <!-- Mobile Header -->
     <header class="mobile-header">
-        <div class="brand"><span>🚀</span> C5GMOD</div>
+        <div class="brand"><span class="brand-mark">CP</span><span>ConnectPlus</span></div>
         <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
     </header>
 
@@ -58,26 +58,26 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="brand" style="justify-content: space-between;">
-                <div><span>🚀</span> C5GMOD</div>
+                <div class="brand-name"><span class="brand-mark">CP</span><span>ConnectPlus</span></div>
                 <button class="menu-toggle" style="display: none; padding-right:0;" onclick="toggleSidebar()" id="closeMenuBtn">✖</button>
             </div>
             
-            <div class="menu-label">Navegação</div>
+            <div class="menu-label">Painel de controle</div>
             <nav class="nav-menu">
                 <div class="nav-item" :class="{active: activeMenu === 'dashboard'}" @click="setMenu('dashboard')">
-                    📊 Visão Geral
+                    <span class="nav-icon">01</span><span>Visão Geral</span>
                 </div>
                 <div class="nav-item" :class="{active: activeMenu === 'general'}" @click="setMenu('general')">
-                    ⚙️ Configurações Gerais
+                    <span class="nav-icon">02</span><span>Configurações Gerais</span>
                 </div>
                 <div class="nav-item" :class="{active: activeMenu === 'layout'}" @click="setMenu('layout')">
-                    🎨 Layout e Cores
+                    <span class="nav-icon">03</span><span>Layout e Cores</span>
                 </div>
                 <div class="nav-item" :class="{active: activeMenu === 'servers'}" @click="setMenu('servers')">
-                    🖥️ Servidores
+                    <span class="nav-icon">04</span><span>Servidores</span>
                 </div>
                 <div class="nav-item" :class="{active: activeMenu === 'raw'}" @click="setMenu('raw')">
-                    📝 Editor JSON Bruto
+                    <span class="nav-icon">05</span><span>Editor JSON Bruto</span>
                 </div>
             </nav>
             
@@ -99,7 +99,7 @@
             <!-- Dashboard Section -->
             <div v-show="activeMenu === 'dashboard'">
                 <div class="page-header">
-                    <h1 class="page-title">Visão Geral do Painel</h1>
+                    <div class="eyebrow">CENTRAL DE CONTROLE</div><h1 class="page-title">Visão Geral</h1>
                     <p class="text-muted">Gerencie suas configurações remotas.</p>
                 </div>
                 
@@ -137,7 +137,7 @@
             <!-- General Section -->
             <div v-show="activeMenu === 'general'">
                 <div class="page-header">
-                    <h1 class="page-title">Configurações Gerais</h1>
+                    <div class="eyebrow">CONFIGURAÇÃO GLOBAL</div><h1 class="page-title">Configurações Gerais</h1>
                     <p class="text-muted">Configurações globais do aplicativo.</p>
                 </div>
                 
@@ -188,7 +188,7 @@
             <!-- Layout Section -->
             <div v-show="activeMenu === 'layout'">
                 <div class="page-header">
-                    <h1 class="page-title">Layout e Cores</h1>
+                    <div class="eyebrow">IDENTIDADE VISUAL</div><h1 class="page-title">Layout e Cores</h1>
                     <p class="text-muted">Personalize links, imagens e cores do aplicativo.</p>
                 </div>
                 
@@ -222,7 +222,7 @@
             <div v-show="activeMenu === 'servers'">
                 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h1 class="page-title">Servidores</h1>
+                        <div class="eyebrow">CONNECTPLUS</div><h1 class="page-title">Servidores</h1>
                         <p class="text-muted">Gerencie seus servidores e IPs.</p>
                     </div>
                     <button class="btn primary" @click="addServer">＋ Novo Servidor</button>
@@ -248,7 +248,7 @@
             <!-- Raw JSON Section -->
             <div v-show="activeMenu === 'raw'">
                 <div class="page-header">
-                    <h1 class="page-title">JSON Bruto</h1>
+                    <div class="eyebrow">MODO AVANÇADO</div><h1 class="page-title">Editor JSON</h1>
                     <p class="text-muted">Editor avançado para desenvolvedores e ajustes manuais.</p>
                 </div>
                 <textarea id="jsonEditor" spellcheck="false" :value="jsonString" @input="updateFromJson"></textarea>
