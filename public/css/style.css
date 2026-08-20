@@ -1562,3 +1562,16 @@ body.dashboard-body {
         display: none;
     }
 }
+
+/* Emoji navigation icons */
+.nav-icon {
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.nav-item.active .nav-icon {
+    background: var(--accent-soft);
+    border-color: rgba(110,168,254,0.32);
+    box-shadow: 0 4px 12px rgba(50,108,242,0.14);
+}

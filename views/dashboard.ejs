@@ -66,19 +66,19 @@
             <div class="menu-label">Painel de controle</div>
             <nav class="nav-menu">
                 <div class="nav-item" :class="{active: activeMenu === 'dashboard'}" @click="setMenu('dashboard')">
-                    <span class="nav-icon">01</span><span>Visão Geral</span>
+                    <span class="nav-icon" aria-hidden="true">📊</span><span>Visão Geral</span>
                 </div>
                 <div class="nav-item" :class="{active: activeMenu === 'general'}" @click="setMenu('general')">
-                    <span class="nav-icon">02</span><span>Configurações Gerais</span>
+                    <span class="nav-icon" aria-hidden="true">⚙️</span><span>Configurações Gerais</span>
                 </div>
                 <div class="nav-item" :class="{active: activeMenu === 'layout'}" @click="setMenu('layout')">
-                    <span class="nav-icon">03</span><span>Layout e Cores</span>
+                    <span class="nav-icon" aria-hidden="true">🎨</span><span>Layout e Cores</span>
                 </div>
                 <div class="nav-item" :class="{active: activeMenu === 'servers'}" @click="setMenu('servers')">
-                    <span class="nav-icon">04</span><span>Servidores</span>
+                    <span class="nav-icon" aria-hidden="true">🖥️</span><span>Servidores</span>
                 </div>
                 <div class="nav-item" :class="{active: activeMenu === 'raw'}" @click="setMenu('raw')">
-                    <span class="nav-icon">05</span><span>Editor JSON Bruto</span>
+                    <span class="nav-icon" aria-hidden="true">📝</span><span>Editor JSON Bruto</span>
                 </div>
             </nav>
             
