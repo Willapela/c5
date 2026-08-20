@@ -126,7 +126,21 @@ const DEFAULT_CONFIG = {
     "Theme": {
         "Version": "1",
         "Update": "",
-        "AppName": "ConnectPlus"
+        "AppName": "ConnectPlus",
+        "ImgFundo": "https://cdn.awsli.com.br/2500x2500/549/549871/produto/29108392/60cdfb3799.jpg",
+        "ImgLogo": "https://i.imgur.com/KMpSZOq.gif",
+        "ImgBanner": "",
+        "ImgMenu": "https://telegra.ph/file/828fa0ae4f65228764d39.png",
+        "ImgLogs": "https://telegra.ph/file/ca921a93220cc2281f147.png",
+        "ImgCheck": "https://telegra.ph/file/12ab1b8c54f671f72bc73.png",
+        "ImgUser": "https://telegra.ph/file/51cfbf308fa6a293d6f7b.png",
+        "ImgPass": "https://telegra.ph/file/0aae4b5cc75034f04611d.png",
+        "ColorOne": "#7A333333",
+        "ColorTwo": "#7A333333",
+        "ColorStarter": "#7A333333",
+        "ColorDialogs": "#84ffffff",
+        "ColorButtons": "#333333",
+        "ImgUpdate": "https://i.imgur.com/CJFEvDW.png"
     },
     "logoonline": "https://i.ibb.co/1GFWft65/ic-banner.png",
     "fundoonline": "https://i.ibb.co/Pz189Nvw/77bb3128f92f68bbf7e4e38156078416.jpg",
@@ -327,7 +341,21 @@ app.get('/:username/theme', (req, res) => {
     const theme = {
         Version: String(savedTheme.Version ?? config.Version ?? 1),
         Update: `${requestBaseUrl(req)}/${encodeURIComponent(username)}/theme`,
-        AppName: 'ConnectPlus'
+        AppName: 'ConnectPlus',
+        ImgFundo: savedTheme.ImgFundo || '',
+        ImgLogo: savedTheme.ImgLogo || '',
+        ImgBanner: savedTheme.ImgBanner || '',
+        ImgMenu: savedTheme.ImgMenu || '',
+        ImgLogs: savedTheme.ImgLogs || '',
+        ImgCheck: savedTheme.ImgCheck || '',
+        ImgUser: savedTheme.ImgUser || '',
+        ImgPass: savedTheme.ImgPass || '',
+        ColorOne: savedTheme.ColorOne || '',
+        ColorTwo: savedTheme.ColorTwo || '',
+        ColorStarter: savedTheme.ColorStarter || '',
+        ColorDialogs: savedTheme.ColorDialogs || '',
+        ColorButtons: savedTheme.ColorButtons || '',
+        ImgUpdate: savedTheme.ImgUpdate || ''
     };
     res.type('application/json').send(theme);
 });
