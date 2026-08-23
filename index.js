@@ -603,11 +603,23 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
         const nextConfig = JSON.parse(config_json);
         const user = getUser(req.user.username);
         if (user) {
-            // Nunca auto-incrementa. Mantém exatamente o que veio do painel.
-            const parsedVersion = Number(nextConfig.Version);
+            const previousConfig = parseUserConfig(user);
+
+            // --- Config Version: auto sobe se o conteúdo mudou ---
+            const previousVersion = Number(previousConfig.Version) || 0;
+            let submittedVersion = Number(nextConfig.Version);
+            if (!Number.isFinite(submittedVersion)) submittedVersion = previousVersion || 1;
+
+            const oldComparable = JSON.stringify({ ...previousConfig, Version: undefined });
+            const newComparable = JSON.stringify({ ...nextConfig, Version: undefined });
+            if (oldComparable !== newComparable && submittedVersion <= previousVersion) {
+                nextConfig.Version = previousVersion + 1;
+            } else {
+                nextConfig.Version = submittedVersion;
+            }
+
             const parsedAppVersion = Number(nextConfig.AppVersion);
-            nextConfig.Version = Number.isFinite(parsedVersion) ? parsedVersion : 1;
-            nextConfig.AppVersion = Number.isFinite(parsedAppVersion) ? parsedAppVersion : nextConfig.Version;
+            nextConfig.AppVersion = Number.isFinite(parsedAppVersion) ? parsedAppVersion : Number(nextConfig.Version) || 1;
             nextConfig.VersionName = String(
                 nextConfig.VersionName !== undefined && nextConfig.VersionName !== null && nextConfig.VersionName !== ''
                     ? nextConfig.VersionName
@@ -617,12 +629,41 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
             nextConfig.Actualization = (nextConfig.Actualization === true || nextConfig.Actualization === 'true' || nextConfig.Actualization === 1 || nextConfig.Actualization === '1')
                 ? 'true'
                 : 'false';
+
+            // --- SMS: auto sobe Version se Notes/Update mudarem ---
+            const prevSms = (previousConfig.Sms && typeof previousConfig.Sms === 'object') ? previousConfig.Sms : {};
             const smsIn = (nextConfig.Sms && typeof nextConfig.Sms === 'object') ? nextConfig.Sms : {};
+            const prevSmsBody = JSON.stringify({ Update: String(prevSms.Update ?? ''), Notes: String(prevSms.Notes ?? '') });
+            const nextSmsBody = JSON.stringify({ Update: String(smsIn.Update ?? ''), Notes: String(smsIn.Notes ?? '') });
+            let smsVersion = Number(smsIn.Version ?? prevSms.Version ?? 1);
+            if (!Number.isFinite(smsVersion)) smsVersion = 1;
+            const prevSmsVersion = Number(prevSms.Version) || 0;
+            if (prevSmsBody !== nextSmsBody && smsVersion <= prevSmsVersion) {
+                smsVersion = prevSmsVersion + 1;
+            }
             nextConfig.Sms = {
-                Version: String(smsIn.Version ?? '1'),
+                Version: String(smsVersion),
                 Update: String(smsIn.Update ?? ''),
                 Notes: String(smsIn.Notes ?? '')
             };
+
+            // --- Theme: auto sobe Version se imagens/cores mudarem ---
+            const prevTheme = (previousConfig.Theme && typeof previousConfig.Theme === 'object') ? previousConfig.Theme : {};
+            const themeIn = (nextConfig.Theme && typeof nextConfig.Theme === 'object') ? nextConfig.Theme : {};
+            const themeKeys = ['AppName', 'ImgFundo', 'ImgLogo', 'ImgBanner', 'ImgMenu', 'ImgLogs', 'ImgCheck', 'ImgUser', 'ImgPass', 'ColorOne', 'ColorTwo', 'ColorStarter', 'ColorDialogs', 'ColorButtons', 'ImgUpdate'];
+            const pickTheme = (t) => {
+                const o = {};
+                themeKeys.forEach((k) => { o[k] = t[k] ?? ''; });
+                return o;
+            };
+            let themeVersion = Number(themeIn.Version ?? prevTheme.Version ?? 1);
+            if (!Number.isFinite(themeVersion)) themeVersion = 1;
+            const prevThemeVersion = Number(prevTheme.Version) || 0;
+            if (JSON.stringify(pickTheme(prevTheme)) !== JSON.stringify(pickTheme(themeIn)) && themeVersion <= prevThemeVersion) {
+                themeVersion = prevThemeVersion + 1;
+            }
+            nextConfig.Theme = { ...themeIn, Version: String(themeVersion), AppName: 'ConnectPlus' };
+
             const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'Actualization', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers', 'Sms'];
             Object.keys(nextConfig).forEach((key) => {
                 if (!allowedRootKeys.includes(key)) delete nextConfig[key];
@@ -639,7 +680,8 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
                 VersionName: nextConfig.VersionName,
                 Actualization: nextConfig.Actualization,
                 UpdateApk: nextConfig.UpdateApk,
-                Sms: nextConfig.Sms
+                Sms: nextConfig.Sms,
+                ThemeVersion: nextConfig.Theme && nextConfig.Theme.Version
             });
         } else {
             res.status(500).send('Erro ao salvar as configurações');
