@@ -347,6 +347,28 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
 }
 
+/* Upload de APK */
+.apk-upload-box {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px dashed rgba(110, 168, 254, 0.28);
+    border-radius: 0.9rem;
+    background: rgba(8, 18, 35, 0.45);
+}
+.apk-upload-box input[type="file"] {
+    display: none;
+}
+.apk-upload-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: center;
+}
+.apk-upload-box code {
+    color: #93c5fd;
+    font-size: 0.85em;
+}
+
 /* CDN Pool results — um embaixo do outro */
 .cdn-results-list {
     display: flex;
