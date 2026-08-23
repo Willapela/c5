@@ -187,8 +187,8 @@
                 <div class="glass-container config-card">
                     <div class="form-group">
                         <label>Links ou domínios</label>
-                        <textarea v-model="cdnInput" rows="5" placeholder="oc3xhkzwdcw.map.azionedge.net\nhttps://exemplo.com/cdn"></textarea>
-                        <small class="text-muted">Informe um por linha ou separados por vírgula. Serão testados no máximo 100 links.</small>
+                        <textarea v-model="cdnInput" rows="5" placeholder="oc3xhkzwdcw.map.azionedge.net&#10;https://exemplo.com/cdn&#10;outro.dominio.com"></textarea>
+                        <small class="text-muted">Um por linha, ou separados por vírgula ou #. Máximo 100 links.</small>
                     </div>
                     <div class="card-grid form-grid-2">
                         <button class="btn secondary" @click="saveCdnPool">💾 Salvar pool</button>
@@ -197,13 +197,26 @@
                 </div>
                 <div v-if="cdnResults.length" class="glass-container config-card">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
-                        <div><h3 class="section-title" style="margin-top:0;">Resultado dos testes</h3><p class="text-muted">{{ cdnActive.length }} link(s) ativo(s) de {{ cdnResults.length }}.</p></div>
+                        <div>
+                            <h3 class="section-title" style="margin-top:0;">Resultado dos testes</h3>
+                            <p class="text-muted">{{ cdnOnlineCount }} ONLINE · {{ cdnOfflineCount }} OFFLINE · total {{ cdnResults.length }}</p>
+                            <p v-if="cdnTestedAt" class="text-muted" style="font-size:0.75rem;">Último teste: {{ formatTestedAt(cdnTestedAt) }}</p>
+                        </div>
                         <button class="btn secondary small" @click="copyActiveCdn">📋 Copiar ativos</button>
                     </div>
-                    <div class="list-container">
-                        <div class="list-item" v-for="item in cdnResults" :key="item.url">
-                            <div class="list-item-content"><div class="list-item-title">{{ item.url }}</div><div class="list-item-subtitle">{{ item.host || item.error || 'Sem resposta' }} · {{ item.latency }} ms · HTTP {{ item.status || '—' }}</div></div>
-                            <span :style="{color: item.online ? '#34d399' : '#fb7185', fontWeight: '700'}">{{ item.online ? 'ONLINE' : 'OFFLINE' }}</span>
+                    <div class="cdn-results-list">
+                        <div class="list-item cdn-result-item" v-for="item in cdnResults" :key="item.url">
+                            <div class="list-item-content">
+                                <div class="list-item-title">{{ displayCdnHost(item) }}</div>
+                                <div class="list-item-subtitle">
+                                    {{ item.error || item.host || 'Sem resposta' }}
+                                    · {{ item.latency }} ms
+                                    · HTTP {{ item.status || '—' }}
+                                </div>
+                            </div>
+                            <span class="cdn-status" :class="item.online ? 'is-online' : 'is-offline'">
+                                {{ item.online ? 'ONLINE' : 'OFFLINE' }}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -474,6 +487,7 @@
                     cdnInput: '',
                     cdnResults: [],
                     cdnActive: [],
+                    cdnTestedAt: null,
                     cdnTesting: false,
                     modal: {
                         isOpen: false,
@@ -490,9 +504,33 @@
             computed: {
                 jsonString() {
                     return JSON.stringify(this.config, null, 4);
+                },
+                cdnOnlineCount() {
+                    return (this.cdnResults || []).filter(item => item && item.online).length;
+                },
+                cdnOfflineCount() {
+                    return (this.cdnResults || []).filter(item => item && !item.online).length;
                 }
             },
             methods: {
+                parseCdnLinks(raw) {
+                    return String(raw || '')
+                        .split(/[\n,#]+/)
+                        .map(item => item.trim())
+                        .filter(Boolean);
+                },
+                displayCdnHost(item) {
+                    const value = (item && (item.host || item.url)) || '';
+                    return String(value).replace(/^https?:\/\//i, '');
+                },
+                formatTestedAt(iso) {
+                    if (!iso) return '';
+                    try {
+                        return new Date(iso).toLocaleString('pt-BR');
+                    } catch (e) {
+                        return iso;
+                    }
+                },
                 setMenu(menu) {
                     this.activeMenu = menu;
                     localStorage.setItem('activeMenu', menu);
@@ -505,39 +543,63 @@
                         const response = await fetch('/api/cdn-pool');
                         const data = await response.json();
                         this.cdnPool = data.urls || [];
-                        this.cdnInput = this.cdnPool.join('\n');
+                        this.cdnInput = this.cdnPool
+                            .map(url => String(url || '').replace(/^https?:\/\//i, ''))
+                            .join('\n');
+                        this.cdnResults = data.results || [];
+                        this.cdnActive = data.active || [];
+                        this.cdnTestedAt = data.testedAt || null;
                     } catch (e) {
                         this.cdnPool = [];
                     }
                 },
                 async saveCdnPool() {
-                    const urls = this.cdnInput.split(/[\n,]+/).map(item => item.trim()).filter(Boolean);
+                    const urls = this.parseCdnLinks(this.cdnInput);
                     const response = await fetch('/api/cdn-pool', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ urls }) });
                     const data = await response.json();
                     this.cdnPool = data.urls || [];
-                    this.cdnInput = this.cdnPool.join('\n');
+                    this.cdnInput = this.cdnPool
+                        .map(url => String(url || '').replace(/^https?:\/\//i, ''))
+                        .join('\n');
                     this.saveStatus = '✅ Pool CDN salvo!';
                     setTimeout(() => { this.saveStatus = ''; }, 2500);
                 },
                 async testCdnPool() {
                     this.cdnTesting = true;
                     try {
-                        const urls = this.cdnInput.split(/[\n,]+/).map(item => item.trim()).filter(Boolean);
+                        const urls = this.parseCdnLinks(this.cdnInput);
                         const response = await fetch('/api/cdn-pool/test', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ urls }) });
                         const data = await response.json();
                         this.cdnResults = data.results || [];
                         this.cdnActive = data.active || [];
+                        this.cdnTestedAt = data.testedAt || new Date().toISOString();
                     } finally {
                         this.cdnTesting = false;
                     }
                 },
                 async copyActiveCdn() {
-                    if (!this.cdnActive.length) return alert('Nenhum link ativo encontrado. Teste o pool primeiro.');
-                    // Copia sem protocolo (sem https:// ou http://), separado por #
-                    const text = this.cdnActive
-                        .map(url => String(url || '').replace(/^https?:\/\//i, ''))
+                    // Fonte prioritária: resultados testados com status ONLINE
+                    const fromResults = (this.cdnResults || [])
+                        .filter(item => item && item.online)
+                        .map(item => item.url || item.host || '');
+                    const source = fromResults.length
+                        ? fromResults
+                        : (this.cdnActive || []);
+
+                    if (!source.length) {
+                        return alert('Nenhum link ONLINE encontrado. Clique em “Testar links” antes de copiar.');
+                    }
+
+                    // Copia só ativos e sem protocolo (sem https:// ou http://)
+                    const text = source
+                        .map(url => String(url || '').trim().replace(/^https?:\/\//i, ''))
                         .filter(Boolean)
                         .join('#');
+
+                    if (!text) {
+                        return alert('Nenhum link válido para copiar.');
+                    }
+
                     let copied = false;
                     try {
                         if (navigator.clipboard && window.isSecureContext) {
