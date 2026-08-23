@@ -120,6 +120,18 @@ function getCdnPool(user) {
     return Array.isArray(user.cdn_pool) ? user.cdn_pool.filter(Boolean).map(String) : [];
 }
 
+function parseCdnInput(values) {
+    const list = Array.isArray(values) ? values : String(values || '').split(/[\n,#]+/);
+    return [...new Set(
+        list
+            .flatMap(item => String(item || '').split(/[\n,#]+/))
+            .map(item => item.trim())
+            .filter(Boolean)
+            .map(normalizeCdnUrl)
+            .filter(Boolean)
+    )].slice(0, 100);
+}
+
 function normalizeCdnUrl(value) {
     try {
         const raw = String(value || '').trim();
@@ -148,9 +160,23 @@ async function testCdnUrl(value) {
             signal: controller.signal
         });
         clearTimeout(timer);
-        return { url: target, online: response.ok || response.status < 500, status: response.status, latency: Date.now() - started, host: new URL(response.url).hostname };
+        // Azion e outras CDNs costumam responder 400 no probe; se respondeu (<500), está ONLINE
+        const online = response.status > 0 && response.status < 500;
+        return {
+            url: target,
+            online,
+            status: response.status,
+            latency: Date.now() - started,
+            host: new URL(response.url).hostname
+        };
     } catch (error) {
-        return { url: target || String(value || ''), online: false, status: 0, latency: Date.now() - started, error: error.name === 'AbortError' ? 'Tempo esgotado' : error.message };
+        return {
+            url: target || String(value || ''),
+            online: false,
+            status: 0,
+            latency: Date.now() - started,
+            error: error.name === 'AbortError' ? 'Tempo esgotado' : error.message
+        };
     }
 }
 
@@ -294,14 +320,18 @@ app.get('/dashboard', requireAuth, (req, res) => {
 app.get('/api/cdn-pool', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
-    res.json({ urls: getCdnPool(user) });
+    res.json({
+        urls: getCdnPool(user),
+        results: Array.isArray(user.cdn_pool_results) ? user.cdn_pool_results : [],
+        active: Array.isArray(user.cdn_pool_active) ? user.cdn_pool_active : [],
+        testedAt: user.cdn_pool_tested_at || null
+    });
 });
 
 app.post('/api/cdn-pool', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
-    const values = Array.isArray(req.body.urls) ? req.body.urls : String(req.body.urls || '').split(/[\\n,]+/);
-    const urls = [...new Set(values.map(normalizeCdnUrl).filter(Boolean))].slice(0, 100);
+    const urls = parseCdnInput(req.body.urls);
     user.cdn_pool = urls;
     saveUser(user.username, user);
     res.json({ urls });
@@ -310,10 +340,19 @@ app.post('/api/cdn-pool', requireAuth, (req, res) => {
 app.post('/api/cdn-pool/test', requireAuth, async (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
-    const values = Array.isArray(req.body.urls) ? req.body.urls : getCdnPool(user);
-    const urls = [...new Set(values.map(normalizeCdnUrl).filter(Boolean))].slice(0, 100);
+    const urls = parseCdnInput(
+        Array.isArray(req.body.urls) && req.body.urls.length
+            ? req.body.urls
+            : getCdnPool(user)
+    );
     const results = await Promise.all(urls.map(testCdnUrl));
-    res.json({ results, active: results.filter(item => item.online).map(item => item.url) });
+    const active = results.filter(item => item.online).map(item => item.url);
+    // Guarda o último teste para não sumir ao recarregar/relogar
+    user.cdn_pool_results = results;
+    user.cdn_pool_active = active;
+    user.cdn_pool_tested_at = new Date().toISOString();
+    saveUser(user.username, user);
+    res.json({ results, active, testedAt: user.cdn_pool_tested_at });
 });
 
 app.delete('/api/cdn-pool', requireAuth, (req, res) => {
