@@ -347,6 +347,16 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
 }
 
+/* Toggle atualização do app */
+.actualization-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.actualization-toggle .btn {
+    min-width: 120px;
+}
+
 /* Upload de APK */
 .apk-upload-box {
     margin-top: 1rem;
