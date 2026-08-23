@@ -11,7 +11,7 @@
     <div class="glass-container auth-box">
         <div class="logo-area">
             <div class="auth-mark">CP</div>
-            <div class="auth-eyebrow">CONNECTPLUS C5G PANEL</div>
+            <div class="auth-eyebrow">CONNECTPLUS PANEL</div>
             <h2>Bem-vindo de volta</h2>
             <p>Entre para gerenciar suas configurações remotas.</p>
         </div>
@@ -20,12 +20,12 @@
         <% } %>
         <form action="/login" method="POST">
             <div class="form-group">
-                <label>Usuário</label>
-                <input type="text" name="username" placeholder="admin" required>
+                <label>Usuário ou e-mail</label>
+                <input type="text" name="username" placeholder="admin ou voce@email.com" required autocomplete="username">
             </div>
             <div class="form-group">
                 <label>Senha</label>
-                <input type="password" name="password" placeholder="••••••••" required>
+                <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password">
             </div>
             <button type="submit" class="btn primary full-width">Entrar no painel</button>
         </form>
