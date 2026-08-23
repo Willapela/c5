@@ -4,18 +4,49 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
 
 const app = express();
 const PORT = Number(process.env.PORT || 2000);
-const JWT_SECRET = 'super_secret_c5g_key_for_testing';
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_c5g_key_for_testing';
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
 app.set('trust proxy', true);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Pasta pública para APKs por usuário
+const APK_DIR = path.join(__dirname, 'public', 'apks');
+if (!fs.existsSync(APK_DIR)) {
+    fs.mkdirSync(APK_DIR, { recursive: true });
+}
+
+const apkStorage = multer.diskStorage({
+    destination(req, file, cb) {
+        const username = req.user && req.user.username ? String(req.user.username) : 'anon';
+        const dir = path.join(APK_DIR, username);
+        fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename(req, file, cb) {
+        cb(null, 'app.apk');
+    }
+});
+
+const apkUpload = multer({
+    storage: apkStorage,
+    limits: { fileSize: 120 * 1024 * 1024 }, // 120 MB
+    fileFilter(req, file, cb) {
+        const name = String(file.originalname || '').toLowerCase();
+        const ok = name.endsWith('.apk') || file.mimetype === 'application/vnd.android.package-archive'
+            || file.mimetype === 'application/octet-stream';
+        if (!ok) return cb(new Error('Envie apenas arquivo .apk'));
+        cb(null, true);
+    }
+});
 
 // Recursos de atualização do aplicativo. Os arquivos ficam em public/updates
 // para que possam ser substituídos sem misturar dados privados dos usuários.
@@ -307,14 +338,71 @@ app.get('/dashboard', requireAuth, (req, res) => {
     
     // Preserve the external port (for example :2000) in all generated URLs.
     const hostUrl = requestBaseUrl(req);
+    const apkRelative = `/apks/${encodeURIComponent(user.username)}/app.apk`;
+    const apkPath = path.join(APK_DIR, user.username, 'app.apk');
+    const hasApk = fs.existsSync(apkPath);
     res.render('dashboard', {
         user: req.user,
         configStr: JSON.stringify(parseUserConfig(user), null, 2),
         appUrl: `${hostUrl}/${encodeURIComponent(user.username)}/config`,
-            appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`,
-            smsUrl: `${hostUrl}/${encodeURIComponent(user.username)}/sms`,
-            themeUrl: `${hostUrl}/${encodeURIComponent(user.username)}/theme`
+        appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`,
+        smsUrl: `${hostUrl}/${encodeURIComponent(user.username)}/sms`,
+        themeUrl: `${hostUrl}/${encodeURIComponent(user.username)}/theme`,
+        apkUrl: hasApk ? `${hostUrl}${apkRelative}` : '',
+        hasApk
     });
+});
+
+// Upload do APK do aplicativo (atualização)
+app.post('/api/apk/upload', requireAuth, (req, res) => {
+    apkUpload.single('apk')(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ error: err.message || 'Falha no upload do APK' });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+        }
+
+        const user = getUser(req.user.username);
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+        const hostUrl = requestBaseUrl(req);
+        const apkUrl = `${hostUrl}/apks/${encodeURIComponent(user.username)}/app.apk`;
+
+        const config = parseUserConfig(user);
+        config.UpdateApk = apkUrl;
+        if (req.body && req.body.AppVersion) {
+            config.AppVersion = Number(req.body.AppVersion) || config.AppVersion || 1;
+        }
+        if (req.body && req.body.VersionName) {
+            config.VersionName = String(req.body.VersionName);
+        }
+        user.config_json = JSON.stringify(config, null, 2);
+        saveUser(user.username, user);
+
+        res.json({
+            ok: true,
+            apkUrl,
+            AppVersion: config.AppVersion,
+            VersionName: config.VersionName,
+            UpdateApk: config.UpdateApk
+        });
+    });
+});
+
+app.delete('/api/apk', requireAuth, (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const apkPath = path.join(APK_DIR, user.username, 'app.apk');
+    if (fs.existsSync(apkPath)) fs.unlinkSync(apkPath);
+
+    const config = parseUserConfig(user);
+    const hostUrl = requestBaseUrl(req);
+    const selfUrl = `${hostUrl}/apks/${encodeURIComponent(user.username)}/app.apk`;
+    if (config.UpdateApk === selfUrl) config.UpdateApk = '';
+    user.config_json = JSON.stringify(config, null, 2);
+    saveUser(user.username, user);
+    res.json({ ok: true });
 });
 
 app.get('/api/cdn-pool', requireAuth, (req, res) => {
