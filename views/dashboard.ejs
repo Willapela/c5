@@ -375,6 +375,7 @@
                             <small class="text-muted">Texto que aparece no aplicativo.</small>
                         </div>
                     </div>
+                </div>
             </div>
 
             <!-- Profile Section -->
@@ -660,14 +661,6 @@
                 },
                 isActualizationOn() {
                     return this.config.Actualization === 'true' || this.config.Actualization === true;
-                },
-                smsPreview() {
-                    const sms = (this.config && this.config.Sms) ? this.config.Sms : {};
-                    return JSON.stringify({
-                        Version: String(sms.Version ?? '1'),
-                        Update: String(sms.Update ?? ''),
-                        Notes: String(sms.Notes ?? '')
-                    }, null, 2);
                 }
             },
             methods: {
