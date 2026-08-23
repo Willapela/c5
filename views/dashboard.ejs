@@ -570,8 +570,10 @@
                 }
             },
             methods: {
-                setActualization(on) {
+                async setActualization(on) {
                     this.config.Actualization = on ? 'true' : 'false';
+                    // Salva imediatamente para não voltar false ao recarregar
+                    await this.saveConfig();
                 },
                 parseCdnLinks(raw) {
                     return String(raw || '')
