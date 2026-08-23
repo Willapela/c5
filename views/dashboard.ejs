@@ -158,7 +158,7 @@
                         <div class="form-group">
                             <label>Versão da configuração (Version)</label>
                             <input type="number" v-model.number="config.Version" step="1">
-                            <small class="text-muted">Usada pelo app para puxar config nova. Você controla o número — não sobe sozinho.</small>
+                            <small class="text-muted">Sobe sozinha ao salvar mudanças (para o app puxar config nova). Você ainda pode forçar um número maior.</small>
                         </div>
                         <div class="form-group">
                             <label>Porta UDP</label>
@@ -299,6 +299,7 @@
                     <div class="card-grid">
                         <div class="form-group"><label>Nome do aplicativo</label><input type="text" v-model="config.Theme.AppName" readonly value="ConnectPlus" style="background-color: rgba(255,255,255,0.05); color: #888; cursor: not-allowed;"></div>
                         <div class="form-group"><label>Versão do tema</label><input type="text" v-model="config.Theme.Version"></div>
+                        <div class="form-group"><label>URL do tema</label><input type="text" v-model="config.Theme.Update" readonly style="background-color: rgba(255,255,255,0.05); color: #888; cursor: not-allowed;"></div>
                         <div class="form-group"><label>Imagem de fundo</label><input type="url" v-model="config.Theme.ImgFundo"></div>
                         <div class="form-group"><label>Logo</label><input type="url" v-model="config.Theme.ImgLogo"></div>
                         <div class="form-group"><label>Banner</label><input type="url" v-model="config.Theme.ImgBanner"></div>
@@ -367,15 +368,25 @@
                         <div class="form-group">
                             <label>Version (SMS)</label>
                             <input type="text" v-model="config.Sms.Version" placeholder="1">
-                            <small class="text-muted">Aumente para o app buscar a mensagem de novo.</small>
+                            <small class="text-muted">Sobe sozinha se a mensagem mudar. Pode forçar um número maior.</small>
                         </div>
-
+                        <div class="form-group">
+                            <label>Update (opcional)</label>
+                            <input type="text" v-model="config.Sms.Update" placeholder="https://... ou deixe vazio">
+                            <small class="text-muted">Campo Update do JSON de SMS.</small>
+                        </div>
                         <div class="form-group full-width">
                             <label>Notes (mensagem)</label>
                             <textarea v-model="config.Sms.Notes" rows="5" placeholder="MENSAGEM DE TESTE"></textarea>
                             <small class="text-muted">Texto que aparece no aplicativo.</small>
                         </div>
                     </div>
+
+                    <div style="margin-top: 1rem;">
+                        <p class="text-muted" style="margin-bottom: 0.5rem;">Prévia do JSON entregue em <code>/sms</code>:</p>
+                        <pre class="sms-preview">{{ smsPreview }}</pre>
+                    </div>
+                </div>
             </div>
 
             <!-- Profile Section -->
@@ -896,8 +907,14 @@
                             if (data.VersionName !== undefined) this.config.VersionName = String(data.VersionName);
                             if (data.Actualization !== undefined) this.config.Actualization = String(data.Actualization);
                             if (data.UpdateApk !== undefined) this.config.UpdateApk = String(data.UpdateApk);
-                            this.saveStatus = `✅ Salvo! Version=${this.config.Version} · AppVersion=${this.config.AppVersion}`;
-                            setTimeout(() => { this.saveStatus = ''; }, 4000);
+                            if (data.Sms) {
+                                this.config.Sms = Object.assign({ Version: '1', Update: '', Notes: '' }, this.config.Sms || {}, data.Sms);
+                            }
+                            if (data.ThemeVersion !== undefined && this.config.Theme) {
+                                this.config.Theme.Version = String(data.ThemeVersion);
+                            }
+                            this.saveStatus = `✅ Salvo! Config v${this.config.Version} · SMS v${this.config.Sms && this.config.Sms.Version} · Tema v${this.config.Theme && this.config.Theme.Version}`;
+                            setTimeout(() => { this.saveStatus = ''; }, 4500);
                         } else {
                             alert((data && data.error) || 'Erro ao salvar as configurações no servidor.');
                         }
