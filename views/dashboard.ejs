@@ -80,14 +80,17 @@
                 <div class="nav-item" :class="{active: activeMenu === 'cdn'}" @click="setMenu('cdn')">
                     <span class="nav-icon" aria-hidden="true">🌐</span><span>Pool CDN</span>
                 </div>
+                <div class="nav-item" :class="{active: activeMenu === 'profile'}" @click="setMenu('profile')">
+                    <span class="nav-icon" aria-hidden="true">👤</span><span>Meu Perfil</span>
+                </div>
             </nav>
             
             <div class="sidebar-footer">
-                <div class="user-profile">
+                <div class="user-profile" style="cursor:pointer;" @click="setMenu('profile')">
                     <div class="avatar"><%= user.username.charAt(0).toUpperCase() %></div>
                     <div>
                         <div style="font-weight: 600; color: #fff;"><%= user.username %></div>
-                        <div style="font-size: 0.8rem; color: var(--text-muted);">Administrador</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);"><%= user.email || 'Sem e-mail' %></div>
                     </div>
                 </div>
                 <a href="/logout" class="btn danger full-width small" style="margin-top: 0.5rem;">Sair</a>
@@ -340,6 +343,46 @@
                 </div>
             </div>
 
+            <!-- Profile Section -->
+            <div v-show="activeMenu === 'profile'">
+                <div class="page-header">
+                    <div class="eyebrow">CONTA</div>
+                    <h1 class="page-title">Meu Perfil</h1>
+                    <p class="text-muted">Gerencie e-mail e senha da sua conta.</p>
+                </div>
+
+                <div class="glass-container config-card">
+                    <div class="card-grid form-grid-2">
+                        <div class="form-group">
+                            <label>Usuário</label>
+                            <input type="text" :value="profile.username" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                            <small class="text-muted">O usuário não pode ser alterado (faz parte da URL da config).</small>
+                        </div>
+                        <div class="form-group">
+                            <label>E-mail</label>
+                            <input type="email" v-model="profile.email" placeholder="voce@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Senha atual</label>
+                            <input type="password" v-model="profile.currentPassword" placeholder="••••••••" autocomplete="current-password">
+                            <small class="text-muted">Obrigatória só se for trocar a senha.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Nova senha</label>
+                            <input type="password" v-model="profile.newPassword" placeholder="••••••••" autocomplete="new-password">
+                            <small class="text-muted">Mínimo 6 caracteres. Deixe em branco para não alterar.</small>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                        <button class="btn primary" :disabled="profileSaving" @click="saveProfile">
+                            {{ profileSaving ? 'Salvando...' : 'Salvar perfil' }}
+                        </button>
+                        <span v-if="profileMsg" style="color:#34d399; font-weight:600;">{{ profileMsg }}</span>
+                        <span v-if="profileError" style="color:#fb7185; font-weight:600;">{{ profileError }}</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Modal for Editing Server/Network -->
             <div class="modal-overlay" v-if="modal.isOpen" @click.self="closeModal">
                 <div class="modal-content">
@@ -546,6 +589,15 @@
                     apkFileName: '',
                     apkUploading: false,
                     apkUploadMsg: '',
+                    profile: {
+                        username: '<%= user.username %>',
+                        email: '<%= user.email || "" %>',
+                        currentPassword: '',
+                        newPassword: ''
+                    },
+                    profileSaving: false,
+                    profileMsg: '',
+                    profileError: '',
                     modal: {
                         isOpen: false,
                         type: '',
@@ -574,6 +626,35 @@
                     this.config.Actualization = on ? 'true' : 'false';
                     // Salva imediatamente para não voltar false ao recarregar
                     await this.saveConfig();
+                },
+                async saveProfile() {
+                    this.profileSaving = true;
+                    this.profileMsg = '';
+                    this.profileError = '';
+                    try {
+                        const response = await fetch('/api/profile', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify({
+                                email: this.profile.email,
+                                currentPassword: this.profile.currentPassword,
+                                newPassword: this.profile.newPassword
+                            })
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) {
+                            throw new Error(data.error || 'Falha ao salvar perfil');
+                        }
+                        this.profile.email = data.email || this.profile.email;
+                        this.profile.currentPassword = '';
+                        this.profile.newPassword = '';
+                        this.profileMsg = '✅ Perfil atualizado!';
+                        setTimeout(() => { this.profileMsg = ''; }, 3000);
+                    } catch (err) {
+                        this.profileError = err.message || 'Erro ao salvar perfil';
+                    } finally {
+                        this.profileSaving = false;
+                    }
                 },
                 parseCdnLinks(raw) {
                     return String(raw || '')
