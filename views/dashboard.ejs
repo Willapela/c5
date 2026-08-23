@@ -401,17 +401,17 @@
                 </div>
             </div>
 
-            <!-- Floating Save Bar -->
-            <div class="floating-save-bar">
-                <div style="margin: 0; width: 100%; display: flex; justify-content: flex-end; align-items: center; gap: 1rem;">
-                    <span v-if="saveStatus" style="color: #10b981; font-weight: 600;">{{ saveStatus }}</span>
-                    <button @click="saveConfig" :disabled="isSaving" class="btn primary full-width-mobile" style="box-shadow: 0 4px 14px 0 rgba(59,130,246,0.39);">
-                        {{ isSaving ? 'Salvando...' : 'Salvar Configurações' }}
-                    </button>
-                </div>
-            </div>
-            
         </main>
+
+        <!-- Floating Save Bar (fora do main para não sumir no desktop) -->
+        <div class="floating-save-bar">
+            <div class="floating-save-inner">
+                <span v-if="saveStatus" class="save-status">{{ saveStatus }}</span>
+                <button @click="saveConfig" :disabled="isSaving" class="btn primary full-width-mobile">
+                    {{ isSaving ? 'Salvando...' : 'Salvar Configurações' }}
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
