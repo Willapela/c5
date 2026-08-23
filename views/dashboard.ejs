@@ -533,7 +533,11 @@
                 },
                 async copyActiveCdn() {
                     if (!this.cdnActive.length) return alert('Nenhum link ativo encontrado. Teste o pool primeiro.');
-                    const text = this.cdnActive.join('#');
+                    // Copia sem protocolo (sem https:// ou http://), separado por #
+                    const text = this.cdnActive
+                        .map(url => String(url || '').replace(/^https?:\/\//i, ''))
+                        .filter(Boolean)
+                        .join('#');
                     let copied = false;
                     try {
                         if (navigator.clipboard && window.isSecureContext) {
