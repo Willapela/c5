@@ -144,6 +144,7 @@ if (!fs.existsSync(DB_DIR)) {
 }
 
 function getUser(username) {
+    if (!username) return null;
     const file = path.join(DB_DIR, `${username}.json`);
     if (fs.existsSync(file)) {
         return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -154,6 +155,38 @@ function getUser(username) {
 function saveUser(username, data) {
     const file = path.join(DB_DIR, `${username}.json`);
     fs.writeFileSync(file, JSON.stringify(data, null, 2));
+}
+
+function listUsers() {
+    if (!fs.existsSync(DB_DIR)) return [];
+    return fs.readdirSync(DB_DIR)
+        .filter((name) => name.endsWith('.json'))
+        .map((name) => {
+            try {
+                return JSON.parse(fs.readFileSync(path.join(DB_DIR, name), 'utf8'));
+            } catch (e) {
+                return null;
+            }
+        })
+        .filter(Boolean);
+}
+
+function findUserByEmail(email) {
+    const target = String(email || '').trim().toLowerCase();
+    if (!target) return null;
+    return listUsers().find((u) => String(u.email || '').trim().toLowerCase() === target) || null;
+}
+
+function findUserByLogin(login) {
+    const value = String(login || '').trim();
+    if (!value) return null;
+    // Login aceita usuário ou e-mail
+    if (value.includes('@')) return findUserByEmail(value);
+    return getUser(value);
+}
+
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
 }
 
 function getCdnPool(user) {
@@ -293,13 +326,13 @@ app.get('/login', (req, res) => {
 
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
-    const user = getUser(username);
-    
-    if (!user) return res.render('login', { error: 'Usuário ou senha inválidos' });
-    
+    const user = findUserByLogin(username);
+
+    if (!user) return res.render('login', { error: 'Usuário/e-mail ou senha inválidos' });
+
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.render('login', { error: 'Usuário ou senha inválidos' });
-    
+    if (!match) return res.render('login', { error: 'Usuário/e-mail ou senha inválidos' });
+
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
     res.cookie('auth_token', token).redirect('/dashboard');
 });
@@ -309,32 +342,101 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) return res.render('register', { error: 'Todos os campos são obrigatórios' });
-    
-    // Check alpha numeric username
+    const username = String(req.body.username || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+
+    if (!username || !email || !password) {
+        return res.render('register', { error: 'Preencha usuário, e-mail e senha' });
+    }
+
     if (!/^[a-zA-Z0-9]+$/.test(username)) {
-        return res.render('register', { error: 'Usuário deve ser alfanumérico' });
+        return res.render('register', { error: 'Usuário deve ser alfanumérico (sem espaços)' });
+    }
+
+    if (!isValidEmail(email)) {
+        return res.render('register', { error: 'E-mail inválido' });
+    }
+
+    if (password.length < 6) {
+        return res.render('register', { error: 'Senha deve ter no mínimo 6 caracteres' });
     }
 
     try {
         if (getUser(username)) {
             return res.render('register', { error: 'Nome de usuário já existe' });
         }
+        if (findUserByEmail(email)) {
+            return res.render('register', { error: 'E-mail já cadastrado' });
+        }
 
         const hash = await bcrypt.hash(password, 10);
         const configJsonStr = JSON.stringify(DEFAULT_CONFIG, null, 2);
-        
+
         saveUser(username, {
             id: Date.now(),
             username,
+            email,
             password: hash,
-            config_json: configJsonStr
+            config_json: configJsonStr,
+            created_at: new Date().toISOString()
         });
         res.redirect('/login');
     } catch (e) {
         res.render('register', { error: 'Erro no servidor' });
     }
+});
+
+// Perfil do usuário logado
+app.get('/api/profile', requireAuth, (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    res.json({
+        username: user.username,
+        email: user.email || '',
+        created_at: user.created_at || null
+    });
+});
+
+app.post('/api/profile', requireAuth, async (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const currentPassword = String(req.body.currentPassword || '');
+    const newPassword = String(req.body.newPassword || '');
+
+    if (email) {
+        if (!isValidEmail(email)) {
+            return res.status(400).json({ error: 'E-mail inválido' });
+        }
+        const other = findUserByEmail(email);
+        if (other && other.username !== user.username) {
+            return res.status(400).json({ error: 'E-mail já está em uso por outra conta' });
+        }
+        user.email = email;
+    }
+
+    if (newPassword) {
+        if (!currentPassword) {
+            return res.status(400).json({ error: 'Informe a senha atual para trocar a senha' });
+        }
+        const match = await bcrypt.compare(currentPassword, user.password);
+        if (!match) {
+            return res.status(400).json({ error: 'Senha atual incorreta' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: 'Nova senha deve ter no mínimo 6 caracteres' });
+        }
+        user.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    saveUser(user.username, user);
+    res.json({
+        ok: true,
+        username: user.username,
+        email: user.email || ''
+    });
 });
 
 app.get('/logout', (req, res) => {
@@ -352,7 +454,11 @@ app.get('/dashboard', requireAuth, (req, res) => {
     const apkPath = path.join(APK_DIR, user.username, 'app.apk');
     const hasApk = fs.existsSync(apkPath);
     res.render('dashboard', {
-        user: req.user,
+        user: {
+            ...req.user,
+            email: user.email || '',
+            created_at: user.created_at || null
+        },
         configStr: JSON.stringify(parseUserConfig(user), null, 2),
         appUrl: `${hostUrl}/${encodeURIComponent(user.username)}/config`,
         appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`,
