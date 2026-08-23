@@ -468,10 +468,16 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
         const nextConfig = JSON.parse(config_json);
         const user = getUser(req.user.username);
         if (user) {
-            // Versão manual: o painel respeita exatamente o valor enviado (pode baixar ou subir)
-            nextConfig.Version = Number(nextConfig.Version) || 1;
-            nextConfig.AppVersion = Number(nextConfig.AppVersion) || Number(nextConfig.Version) || 1;
-            nextConfig.VersionName = String(nextConfig.VersionName ?? nextConfig.Version ?? '1');
+            // Nunca auto-incrementa. Mantém exatamente o que veio do painel.
+            const parsedVersion = Number(nextConfig.Version);
+            const parsedAppVersion = Number(nextConfig.AppVersion);
+            nextConfig.Version = Number.isFinite(parsedVersion) ? parsedVersion : 1;
+            nextConfig.AppVersion = Number.isFinite(parsedAppVersion) ? parsedAppVersion : nextConfig.Version;
+            nextConfig.VersionName = String(
+                nextConfig.VersionName !== undefined && nextConfig.VersionName !== null && nextConfig.VersionName !== ''
+                    ? nextConfig.VersionName
+                    : nextConfig.Version
+            );
             nextConfig.UpdateApk = String(nextConfig.UpdateApk ?? '');
             nextConfig.Actualization = (nextConfig.Actualization === true || nextConfig.Actualization === 'true' || nextConfig.Actualization === 1 || nextConfig.Actualization === '1')
                 ? 'true'
@@ -485,14 +491,14 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
             nextConfig.Site = String(nextConfig.Site ?? '');
             user.config_json = JSON.stringify(nextConfig, null, 2);
             saveUser(user.username, user);
-            // Resposta JSON para o fetch do painel (evita redirect “comendo” o save)
-            if (req.headers.accept && String(req.headers.accept).includes('application/json')) {
-                return res.json({ ok: true, Version: nextConfig.Version, AppVersion: nextConfig.AppVersion });
-            }
-            if (req.xhr || req.headers['content-type']?.includes('application/json')) {
-                return res.json({ ok: true, Version: nextConfig.Version, AppVersion: nextConfig.AppVersion });
-            }
-            return res.json({ ok: true, Version: nextConfig.Version, AppVersion: nextConfig.AppVersion });
+            return res.json({
+                ok: true,
+                Version: nextConfig.Version,
+                AppVersion: nextConfig.AppVersion,
+                VersionName: nextConfig.VersionName,
+                Actualization: nextConfig.Actualization,
+                UpdateApk: nextConfig.UpdateApk
+            });
         } else {
             res.status(500).send('Erro ao salvar as configurações');
         }
