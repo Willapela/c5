@@ -357,6 +357,20 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     min-width: 120px;
 }
 
+.sms-preview {
+    margin: 0;
+    padding: 1rem;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(110, 168, 254, 0.18);
+    background: #050a13;
+    color: #9fc5ff;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 /* Upload de APK */
 .apk-upload-box {
     margin-top: 1rem;
