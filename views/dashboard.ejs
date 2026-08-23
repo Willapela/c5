@@ -153,9 +153,9 @@
                 <div class="glass-container config-card">
                     <div class="card-grid form-grid-2">
                         <div class="form-group">
-                            <label>Versão da configuração</label>
-                            <input type="number" v-model="config.Version" min="1">
-                            <small class="text-muted">Aumente a versão para o ConnectPlus buscar uma nova configuração.</small>
+                            <label>Versão da configuração (Version)</label>
+                            <input type="number" v-model.number="config.Version" step="1">
+                            <small class="text-muted">Usada pelo app para puxar config nova. Você controla o número — não sobe sozinho.</small>
                         </div>
                         <div class="form-group">
                             <label>Porta UDP</label>
@@ -758,18 +758,30 @@
                     this.isSaving = true;
                     this.saveStatus = '';
                     try {
+                        // Garante números limpos antes de enviar
+                        this.config.Version = Number(this.config.Version);
+                        this.config.AppVersion = Number(this.config.AppVersion);
+                        this.config.Actualization = (this.config.Actualization === true || this.config.Actualization === 'true') ? 'true' : 'false';
+
                         const response = await fetch('/dashboard/save', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
                             },
-                            body: JSON.stringify({ config_json: this.jsonString })
+                            body: JSON.stringify({ config_json: JSON.stringify(this.config) })
                         });
-                        if (response.ok) {
-                            this.saveStatus = '✅ Salvo com sucesso!';
-                            setTimeout(() => { this.saveStatus = ''; }, 3000);
+                        const data = await response.json().catch(() => ({}));
+                        if (response.ok && data.ok !== false) {
+                            if (data.Version !== undefined) this.config.Version = Number(data.Version);
+                            if (data.AppVersion !== undefined) this.config.AppVersion = Number(data.AppVersion);
+                            if (data.VersionName !== undefined) this.config.VersionName = String(data.VersionName);
+                            if (data.Actualization !== undefined) this.config.Actualization = String(data.Actualization);
+                            if (data.UpdateApk !== undefined) this.config.UpdateApk = String(data.UpdateApk);
+                            this.saveStatus = `✅ Salvo! Version=${this.config.Version} · AppVersion=${this.config.AppVersion}`;
+                            setTimeout(() => { this.saveStatus = ''; }, 4000);
                         } else {
-                            alert('Erro ao salvar as configurações no servidor.');
+                            alert((data && data.error) || 'Erro ao salvar as configurações no servidor.');
                         }
                     } catch (e) {
                         alert('Erro de conexão ao tentar salvar.');
