@@ -80,9 +80,6 @@
                 <div class="nav-item" :class="{active: activeMenu === 'cdn'}" @click="setMenu('cdn')">
                     <span class="nav-icon" aria-hidden="true">🌐</span><span>Pool CDN</span>
                 </div>
-                <div class="nav-item" :class="{active: activeMenu === 'raw'}" @click="setMenu('raw')">
-                    <span class="nav-icon" aria-hidden="true">📝</span><span>Editor JSON Bruto</span>
-                </div>
             </nav>
             
             <div class="sidebar-footer">
@@ -343,15 +340,6 @@
                 </div>
             </div>
 
-            <!-- Raw JSON Section -->
-            <div v-show="activeMenu === 'raw'">
-                <div class="page-header">
-                    <div class="eyebrow">MODO AVANÇADO</div><h1 class="page-title">Editor JSON</h1>
-                    <p class="text-muted">Editor avançado para desenvolvedores e ajustes manuais.</p>
-                </div>
-                <textarea id="jsonEditor" spellcheck="false" :value="jsonString" @input="updateFromJson"></textarea>
-            </div>
-
             <!-- Modal for Editing Server/Network -->
             <div class="modal-overlay" v-if="modal.isOpen" @click.self="closeModal">
                 <div class="modal-content">
@@ -571,9 +559,6 @@
                 this.loadCdnPool();
             },
             computed: {
-                jsonString() {
-                    return JSON.stringify(this.config, null, 4);
-                },
                 cdnOnlineCount() {
                     return (this.cdnResults || []).filter(item => item && item.online).length;
                 },
@@ -787,13 +772,6 @@
                         alert('Erro de conexão ao tentar salvar.');
                     } finally {
                         this.isSaving = false;
-                    }
-                },
-                updateFromJson(e) {
-                    try {
-                        this.config = JSON.parse(e.target.value);
-                    } catch(err) {
-                        // ignore parsing errors while typing
                     }
                 },
                 editItem(type, index) {
