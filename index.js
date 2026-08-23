@@ -65,7 +65,7 @@ function parseUserConfig(user) {
     try {
         const config = JSON.parse(user.config_json || '{}');
         // Mantém apenas o contrato ConnectPlus e metadados internos necessários ao painel.
-        const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers'];
+        const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'Actualization', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers'];
         Object.keys(config).forEach((key) => {
             if (!allowedRootKeys.includes(key)) delete config[key];
         });
@@ -73,6 +73,11 @@ function parseUserConfig(user) {
         if (config.UdpPort === undefined) config.UdpPort = '7300';
         if (config.Contato === undefined) config.Contato = '';
         if (config.Site === undefined) config.Site = '';
+        if (config.Actualization === undefined) config.Actualization = 'false';
+        // Normaliza para string "true" | "false" (contrato do app)
+        config.Actualization = (config.Actualization === true || config.Actualization === 'true' || config.Actualization === 1 || config.Actualization === '1')
+            ? 'true'
+            : 'false';
         return config;
     } catch (error) {
         return { Version: 1, UdpPort: '7300', Contato: '', Site: '', Servers: [] };
@@ -106,10 +111,14 @@ function buildUserConfig(req, username, user) {
 
 function buildAppUpdate(req, username, user) {
     const stored = parseUserConfig(user);
+    const actualization = (stored.Actualization === true || stored.Actualization === 'true' || stored.Actualization === 1 || stored.Actualization === '1')
+        ? 'true'
+        : 'false';
     return {
         Version: String(stored.AppVersion ?? stored.Version ?? 1),
         VersionName: String(stored.VersionName ?? stored.Version ?? '1'),
         Update: `${requestBaseUrl(req)}/${encodeURIComponent(username)}/config`,
+        Actualization: actualization,
         UpdateApk: stored.UpdateApk || ''
     };
 }
@@ -234,6 +243,7 @@ const DEFAULT_CONFIG = {
     "VersionName": "1.0.0",
     "AppVersion": 1,
     "UpdateApk": "",
+    "Actualization": "false",
     "UdpPort": "7300",
     "Contato": "",
     "Site": "",
@@ -458,16 +468,15 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
         const nextConfig = JSON.parse(config_json);
         const user = getUser(req.user.username);
         if (user) {
-            const previousConfig = parseUserConfig(user);
-            const previousVersion = Number(previousConfig.Version) || 0;
-            const submittedVersion = Number(nextConfig.Version) || 0;
-            const oldComparable = JSON.stringify({ ...previousConfig, Version: undefined });
-            const newComparable = JSON.stringify({ ...nextConfig, Version: undefined });
-            if (oldComparable !== newComparable && submittedVersion <= previousVersion) {
-                nextConfig.Version = previousVersion + 1;
-            }
+            // Versão manual: o painel respeita exatamente o valor enviado (pode baixar ou subir)
+            nextConfig.Version = Number(nextConfig.Version) || 1;
             nextConfig.AppVersion = Number(nextConfig.AppVersion) || Number(nextConfig.Version) || 1;
-            const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers'];
+            nextConfig.VersionName = String(nextConfig.VersionName ?? nextConfig.Version ?? '1');
+            nextConfig.UpdateApk = String(nextConfig.UpdateApk ?? '');
+            nextConfig.Actualization = (nextConfig.Actualization === true || nextConfig.Actualization === 'true' || nextConfig.Actualization === 1 || nextConfig.Actualization === '1')
+                ? 'true'
+                : 'false';
+            const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'Actualization', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers'];
             Object.keys(nextConfig).forEach((key) => {
                 if (!allowedRootKeys.includes(key)) delete nextConfig[key];
             });
@@ -476,7 +485,14 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
             nextConfig.Site = String(nextConfig.Site ?? '');
             user.config_json = JSON.stringify(nextConfig, null, 2);
             saveUser(user.username, user);
-            res.redirect('/dashboard');
+            // Resposta JSON para o fetch do painel (evita redirect “comendo” o save)
+            if (req.headers.accept && String(req.headers.accept).includes('application/json')) {
+                return res.json({ ok: true, Version: nextConfig.Version, AppVersion: nextConfig.AppVersion });
+            }
+            if (req.xhr || req.headers['content-type']?.includes('application/json')) {
+                return res.json({ ok: true, Version: nextConfig.Version, AppVersion: nextConfig.AppVersion });
+            }
+            return res.json({ ok: true, Version: nextConfig.Version, AppVersion: nextConfig.AppVersion });
         } else {
             res.status(500).send('Erro ao salvar as configurações');
         }
