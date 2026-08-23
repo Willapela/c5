@@ -65,7 +65,7 @@ function parseUserConfig(user) {
     try {
         const config = JSON.parse(user.config_json || '{}');
         // Mantém apenas o contrato ConnectPlus e metadados internos necessários ao painel.
-        const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'Actualization', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers'];
+        const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'Actualization', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers', 'Sms'];
         Object.keys(config).forEach((key) => {
             if (!allowedRootKeys.includes(key)) delete config[key];
         });
@@ -78,10 +78,34 @@ function parseUserConfig(user) {
         config.Actualization = (config.Actualization === true || config.Actualization === 'true' || config.Actualization === 1 || config.Actualization === '1')
             ? 'true'
             : 'false';
+        // Bloco SMS do aplicativo
+        const sms = (config.Sms && typeof config.Sms === 'object') ? config.Sms : {};
+        config.Sms = {
+            Version: String(sms.Version ?? '1'),
+            Update: String(sms.Update ?? ''),
+            Notes: String(sms.Notes ?? '')
+        };
         return config;
     } catch (error) {
-        return { Version: 1, UdpPort: '7300', Contato: '', Site: '', Servers: [] };
+        return {
+            Version: 1,
+            UdpPort: '7300',
+            Contato: '',
+            Site: '',
+            Servers: [],
+            Sms: { Version: '1', Update: '', Notes: '' }
+        };
     }
+}
+
+function buildSmsPayload(user) {
+    const stored = parseUserConfig(user);
+    const sms = stored.Sms || {};
+    return {
+        Version: String(sms.Version ?? '1'),
+        Update: String(sms.Update ?? ''),
+        Notes: String(sms.Notes ?? '')
+    };
 }
 
 function buildUserConfig(req, username, user) {
@@ -280,6 +304,11 @@ const DEFAULT_CONFIG = {
     "UdpPort": "7300",
     "Contato": "",
     "Site": "",
+    "Sms": {
+        "Version": "1",
+        "Update": "",
+        "Notes": ""
+    },
     "Theme": {
         "Version": "1",
         "Update": "",
@@ -588,7 +617,13 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
             nextConfig.Actualization = (nextConfig.Actualization === true || nextConfig.Actualization === 'true' || nextConfig.Actualization === 1 || nextConfig.Actualization === '1')
                 ? 'true'
                 : 'false';
-            const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'Actualization', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers'];
+            const smsIn = (nextConfig.Sms && typeof nextConfig.Sms === 'object') ? nextConfig.Sms : {};
+            nextConfig.Sms = {
+                Version: String(smsIn.Version ?? '1'),
+                Update: String(smsIn.Update ?? ''),
+                Notes: String(smsIn.Notes ?? '')
+            };
+            const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'Actualization', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers', 'Sms'];
             Object.keys(nextConfig).forEach((key) => {
                 if (!allowedRootKeys.includes(key)) delete nextConfig[key];
             });
@@ -603,7 +638,8 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
                 AppVersion: nextConfig.AppVersion,
                 VersionName: nextConfig.VersionName,
                 Actualization: nextConfig.Actualization,
-                UpdateApk: nextConfig.UpdateApk
+                UpdateApk: nextConfig.UpdateApk,
+                Sms: nextConfig.Sms
             });
         } else {
             res.status(500).send('Erro ao salvar as configurações');
@@ -632,8 +668,7 @@ app.get('/:username/sms', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
     if (!user) return res.status(404).send('Not Found');
-    const config = buildUserConfig(req, username, user);
-    res.type('application/json').send({ Version: String(config.Version ?? 1), Update: config.Sms });
+    res.type('application/json').send(buildSmsPayload(user));
 });
 
 app.get('/:username/theme', (req, res) => {
