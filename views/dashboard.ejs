@@ -353,6 +353,14 @@
                     <p class="text-muted">Texto que o aplicativo busca no endpoint de SMS.</p>
                 </div>
 
+                <div class="glass-container config-card" style="margin-bottom: 1.25rem;">
+                    <h3 style="margin-bottom: 0.75rem; color: #fff;">URL do SMS</h3>
+                    <div class="url-box" style="margin-bottom: 0;">
+                        <input type="text" readonly value="<%= smsUrl %>" id="smsUrlPanel">
+                        <button onclick="copySpecificUrl('smsUrlPanel')" class="btn secondary">Copiar</button>
+                    </div>
+                    <small class="text-muted">Cole esta URL no app no campo de SMS/Update de aviso.</small>
+                </div>
 
                 <div class="glass-container config-card">
                     <div class="card-grid form-grid-2">
@@ -361,23 +369,13 @@
                             <input type="text" v-model="config.Sms.Version" placeholder="1">
                             <small class="text-muted">Aumente para o app buscar a mensagem de novo.</small>
                         </div>
-                        <div class="form-group">
-                            <label>Update (opcional)</label>
-                            <input type="text" v-model="config.Sms.Update" placeholder="https://... ou deixe vazio">
-                            <small class="text-muted">Campo Update do JSON de SMS.</small>
-                        </div>
+
                         <div class="form-group full-width">
                             <label>Notes (mensagem)</label>
                             <textarea v-model="config.Sms.Notes" rows="5" placeholder="MENSAGEM DE TESTE"></textarea>
                             <small class="text-muted">Texto que aparece no aplicativo.</small>
                         </div>
                     </div>
-
-                    <div style="margin-top: 1rem;">
-                        <p class="text-muted" style="margin-bottom: 0.5rem;">Prévia do JSON entregue em <code>/sms</code>:</p>
-                        <pre class="sms-preview">{{ smsPreview }}</pre>
-                    </div>
-                </div>
             </div>
 
             <!-- Profile Section -->
