@@ -185,8 +185,26 @@
                     </p>
                     <div class="card-grid form-grid-2">
                         <div class="form-group">
+                            <label>Atualização do app</label>
+                            <div class="actualization-toggle">
+                                <button type="button"
+                                    class="btn"
+                                    :class="isActualizationOn ? 'primary' : 'secondary'"
+                                    @click="setActualization(true)">
+                                    Ativada
+                                </button>
+                                <button type="button"
+                                    class="btn"
+                                    :class="!isActualizationOn ? 'danger' : 'secondary'"
+                                    @click="setActualization(false)">
+                                    Desativada
+                                </button>
+                            </div>
+                            <small class="text-muted">Campo <code>Actualization</code>: {{ config.Actualization }}</small>
+                        </div>
+                        <div class="form-group">
                             <label>AppVersion (código)</label>
-                            <input type="number" v-model.number="config.AppVersion" min="1">
+                            <input type="number" v-model.number="config.AppVersion" min="0">
                             <small class="text-muted">Número interno da versão do APK.</small>
                         </div>
                         <div class="form-group">
@@ -504,6 +522,9 @@
                 initialConfig.AppVersion = Number(initialConfig.AppVersion ?? initialConfig.Version ?? 1);
                 initialConfig.VersionName = String(initialConfig.VersionName ?? initialConfig.Version ?? '1');
                 initialConfig.UpdateApk = String(initialConfig.UpdateApk ?? '');
+                initialConfig.Actualization = (initialConfig.Actualization === true || initialConfig.Actualization === 'true' || initialConfig.Actualization === 1 || initialConfig.Actualization === '1')
+                    ? 'true'
+                    : 'false';
                 initialConfig.Theme = Object.assign({
                     Version: '1', Update: '', AppName: 'ConnectPlus', ImgFundo: '', ImgLogo: '', ImgBanner: '',
                     ImgMenu: '', ImgLogs: '', ImgCheck: '', ImgUser: '', ImgPass: '', ColorOne: '#7A333333',
@@ -558,9 +579,15 @@
                 },
                 cdnOfflineCount() {
                     return (this.cdnResults || []).filter(item => item && !item.online).length;
+                },
+                isActualizationOn() {
+                    return this.config.Actualization === 'true' || this.config.Actualization === true;
                 }
             },
             methods: {
+                setActualization(on) {
+                    this.config.Actualization = on ? 'true' : 'false';
+                },
                 parseCdnLinks(raw) {
                     return String(raw || '')
                         .split(/[\n,#]+/)
