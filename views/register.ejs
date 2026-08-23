@@ -11,7 +11,7 @@
     <div class="glass-container auth-box">
         <div class="logo-area">
             <div class="auth-mark">CP</div>
-            <div class="auth-eyebrow">CONNECTPLUS C5G PANEL</div>
+            <div class="auth-eyebrow">CONNECTPLUS PANEL</div>
             <h2>Criar sua conta</h2>
             <p>Configure seu painel e obtenha uma URL personalizada.</p>
         </div>
@@ -20,12 +20,18 @@
         <% } %>
         <form action="/register" method="POST">
             <div class="form-group">
-                <label>Usuário (Apenas letras e números)</label>
-                <input type="text" name="username" placeholder="seunome" required pattern="[a-zA-Z0-9]+">
+                <label>Usuário</label>
+                <input type="text" name="username" placeholder="seunome" required pattern="[a-zA-Z0-9]+" autocomplete="username">
+                <small class="text-muted">Apenas letras e números (usado na URL da config).</small>
+            </div>
+            <div class="form-group">
+                <label>E-mail</label>
+                <input type="email" name="email" placeholder="voce@email.com" required autocomplete="email">
             </div>
             <div class="form-group">
                 <label>Senha</label>
-                <input type="password" name="password" placeholder="••••••••" required>
+                <input type="password" name="password" placeholder="••••••••" required minlength="6" autocomplete="new-password">
+                <small class="text-muted">Mínimo de 6 caracteres.</small>
             </div>
             <button type="submit" class="btn primary full-width">Criar conta</button>
         </form>
