@@ -160,8 +160,8 @@ async function testCdnUrl(value) {
             signal: controller.signal
         });
         clearTimeout(timer);
-        // Azion e outras CDNs costumam responder 400 no probe; se respondeu (<500), está ONLINE
-        const online = response.status > 0 && response.status < 500;
+        // Para Azion: ONLINE apenas com HTTP 400 (host no ar). 404/outros = OFFLINE
+        const online = response.status === 400;
         return {
             url: target,
             online,
