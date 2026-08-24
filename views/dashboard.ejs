@@ -337,23 +337,26 @@
             </div>
 
             <!-- Servers Section -->
-<div class="page-header servers-header">
-    <div>
-        <div class="eyebrow">CONNECTPLUS</div><h1 class="page-title">Servidores</h1>
-        <p class="text-muted">Gerencie seus servidores e IPs.</p>
-    </div>
-    <div class="servers-actions">
-        <button class="btn primary servers-add-btn" @click="addServer">＋ Novo Servidor</button>
-        <div class="servers-io-row">
-            <button type="button" class="btn secondary" @click="exportConfig">⬇ Exportar</button>
-            <label class="btn secondary" style="margin:0; cursor:pointer;">
-                ⬆ Importar
-                <input type="file" accept="application/json,.json" style="display:none" @change="importConfig">
-            </label>
-        </div>
-        <span v-if="importMsg" class="servers-import-msg">{{ importMsg }}</span>
-    </div>
-                
+            <div v-show="activeMenu === 'servers'">
+                <div class="page-header servers-header">
+                    <div>
+                        <div class="eyebrow">CONNECTPLUS</div>
+                        <h1 class="page-title">Servidores</h1>
+                        <p class="text-muted">Gerencie seus servidores e IPs.</p>
+                    </div>
+                    <div class="servers-actions">
+                        <button type="button" class="btn primary servers-add-btn" @click="addServer">＋ Novo Servidor</button>
+                        <div class="servers-io-row">
+                            <button type="button" class="btn secondary" @click="exportConfig">⬇ Exportar</button>
+                            <label class="btn secondary servers-import-btn">
+                                ⬆ Importar
+                                <input type="file" accept="application/json,.json" @change="importConfig">
+                            </label>
+                        </div>
+                        <span v-if="importMsg" class="servers-import-msg">{{ importMsg }}</span>
+                    </div>
+                </div>
+
                 <div class="list-container">
                     <div class="list-item" v-for="(srv, index) in config.Servers" :key="index" @click="editItem('Servers', index)">
                         <div class="list-item-content">
@@ -364,13 +367,13 @@
                             <button class="action-icon-btn danger" @click.stop="removeServer(index)" title="Excluir">✖</button>
                         </div>
                     </div>
-                    
+
                     <div v-if="config.Servers.length === 0" class="text-muted" style="text-align: center; padding: 2rem;">
                         Nenhum servidor encontrado. Clique em "Novo Servidor" para adicionar.
                     </div>
                 </div>
 
-                <div style="margin-top: 1.25rem; display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center;">
+                <div class="servers-save-row">
                     <button type="button" class="btn primary" :disabled="isSaving" @click="saveConfig">
                         {{ isSaving ? 'Salvando...' : 'Salvar servidores' }}
                     </button>
