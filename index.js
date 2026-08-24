@@ -18,7 +18,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Pasta pública para APKs por usuário
+// Pasta pÃºblica para APKs por usuÃ¡rio
 const APK_DIR = path.join(__dirname, 'public', 'apks');
 if (!fs.existsSync(APK_DIR)) {
     fs.mkdirSync(APK_DIR, { recursive: true });
@@ -48,8 +48,8 @@ const apkUpload = multer({
     }
 });
 
-// Recursos de atualização do aplicativo. Os arquivos ficam em public/updates
-// para que possam ser substituídos sem misturar dados privados dos usuários.
+// Recursos de atualizaÃ§Ã£o do aplicativo. Os arquivos ficam em public/updates
+// para que possam ser substituÃ­dos sem misturar dados privados dos usuÃ¡rios.
 const UPDATE_RESOURCES = {
     appupdate: 'appupdate',
     config: 'config',
@@ -64,7 +64,7 @@ function requestBaseUrl(req) {
 function parseUserConfig(user) {
     try {
         const config = JSON.parse(user.config_json || '{}');
-        // Mantém apenas o contrato ConnectPlus e metadados internos necessários ao painel.
+        // MantÃ©m apenas o contrato ConnectPlus e metadados internos necessÃ¡rios ao painel.
         const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'Actualization', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers', 'Sms'];
         Object.keys(config).forEach((key) => {
             if (!allowedRootKeys.includes(key)) delete config[key];
@@ -122,7 +122,7 @@ function buildUserConfig(req, username, user) {
         return clean;
     }) : [];
 
-    // O endpoint público segue exclusivamente o modelo ConnectPlus enviado.
+    // O endpoint pÃºblico segue exclusivamente o modelo ConnectPlus enviado.
     return {
         Version: String(stored.Version ?? 1),
         Update: configUrl,
@@ -150,14 +150,14 @@ function buildAppUpdate(req, username, user) {
 for (const [resource, filename] of Object.entries(UPDATE_RESOURCES)) {
     app.get(`/${resource}`, (req, res) => {
         const file = path.join(__dirname, 'public', 'updates', filename);
-        if (!fs.existsSync(file)) return res.status(404).json({ error: 'Recurso não encontrado' });
+        if (!fs.existsSync(file)) return res.status(404).json({ error: 'Recurso nÃ£o encontrado' });
         res.type('application/json').sendFile(file);
     });
 }
 
 app.get('/updates/manifest.json', (req, res) => {
     const manifest = path.join(__dirname, 'public', 'updates', 'manifest.json');
-    if (!fs.existsSync(manifest)) return res.status(404).json({ error: 'Manifesto não encontrado' });
+    if (!fs.existsSync(manifest)) return res.status(404).json({ error: 'Manifesto nÃ£o encontrado' });
     res.type('application/json').sendFile(manifest);
 });
 
@@ -204,7 +204,7 @@ function findUserByEmail(email) {
 function findUserByLogin(login) {
     const value = String(login || '').trim();
     if (!value) return null;
-    // Login aceita usuário ou e-mail
+    // Login aceita usuÃ¡rio ou e-mail
     if (value.includes('@')) return findUserByEmail(value);
     return getUser(value);
 }
@@ -247,7 +247,7 @@ async function testCdnUrl(value) {
     let target;
     try {
         target = normalizeCdnUrl(value);
-        if (!target) throw new Error('URL inválida');
+        if (!target) throw new Error('URL invÃ¡lida');
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 8000);
         const response = await fetch(target, {
@@ -357,10 +357,10 @@ app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = findUserByLogin(username);
 
-    if (!user) return res.render('login', { error: 'Usuário/e-mail ou senha inválidos' });
+    if (!user) return res.render('login', { error: 'UsuÃ¡rio/e-mail ou senha invÃ¡lidos' });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.render('login', { error: 'Usuário/e-mail ou senha inválidos' });
+    if (!match) return res.render('login', { error: 'UsuÃ¡rio/e-mail ou senha invÃ¡lidos' });
 
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
     res.cookie('auth_token', token).redirect('/dashboard');
@@ -376,27 +376,27 @@ app.post('/register', async (req, res) => {
     const password = String(req.body.password || '');
 
     if (!username || !email || !password) {
-        return res.render('register', { error: 'Preencha usuário, e-mail e senha' });
+        return res.render('register', { error: 'Preencha usuÃ¡rio, e-mail e senha' });
     }
 
     if (!/^[a-zA-Z0-9]+$/.test(username)) {
-        return res.render('register', { error: 'Usuário deve ser alfanumérico (sem espaços)' });
+        return res.render('register', { error: 'UsuÃ¡rio deve ser alfanumÃ©rico (sem espaÃ§os)' });
     }
 
     if (!isValidEmail(email)) {
-        return res.render('register', { error: 'E-mail inválido' });
+        return res.render('register', { error: 'E-mail invÃ¡lido' });
     }
 
     if (password.length < 6) {
-        return res.render('register', { error: 'Senha deve ter no mínimo 6 caracteres' });
+        return res.render('register', { error: 'Senha deve ter no mÃ­nimo 6 caracteres' });
     }
 
     try {
         if (getUser(username)) {
-            return res.render('register', { error: 'Nome de usuário já existe' });
+            return res.render('register', { error: 'Nome de usuÃ¡rio jÃ¡ existe' });
         }
         if (findUserByEmail(email)) {
-            return res.render('register', { error: 'E-mail já cadastrado' });
+            return res.render('register', { error: 'E-mail jÃ¡ cadastrado' });
         }
 
         const hash = await bcrypt.hash(password, 10);
@@ -416,10 +416,10 @@ app.post('/register', async (req, res) => {
     }
 });
 
-// Perfil do usuário logado
+// Perfil do usuÃ¡rio logado
 app.get('/api/profile', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     res.json({
         username: user.username,
         email: user.email || '',
@@ -429,7 +429,7 @@ app.get('/api/profile', requireAuth, (req, res) => {
 
 app.post('/api/profile', requireAuth, async (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
 
     const email = String(req.body.email || '').trim().toLowerCase();
     const currentPassword = String(req.body.currentPassword || '');
@@ -437,11 +437,11 @@ app.post('/api/profile', requireAuth, async (req, res) => {
 
     if (email) {
         if (!isValidEmail(email)) {
-            return res.status(400).json({ error: 'E-mail inválido' });
+            return res.status(400).json({ error: 'E-mail invÃ¡lido' });
         }
         const other = findUserByEmail(email);
         if (other && other.username !== user.username) {
-            return res.status(400).json({ error: 'E-mail já está em uso por outra conta' });
+            return res.status(400).json({ error: 'E-mail jÃ¡ estÃ¡ em uso por outra conta' });
         }
         user.email = email;
     }
@@ -455,7 +455,7 @@ app.post('/api/profile', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Senha atual incorreta' });
         }
         if (newPassword.length < 6) {
-            return res.status(400).json({ error: 'Nova senha deve ter no mínimo 6 caracteres' });
+            return res.status(400).json({ error: 'Nova senha deve ter no mÃ­nimo 6 caracteres' });
         }
         user.password = await bcrypt.hash(newPassword, 10);
     }
@@ -498,7 +498,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     });
 });
 
-// Upload do APK do aplicativo (atualização)
+// Upload do APK do aplicativo (atualizaÃ§Ã£o)
 app.post('/api/apk/upload', requireAuth, (req, res) => {
     apkUpload.single('apk')(req, res, (err) => {
         if (err) {
@@ -509,7 +509,7 @@ app.post('/api/apk/upload', requireAuth, (req, res) => {
         }
 
         const user = getUser(req.user.username);
-        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+        if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
 
         const hostUrl = requestBaseUrl(req);
         const apkUrl = `${hostUrl}/apks/${encodeURIComponent(user.username)}/app.apk`;
@@ -537,7 +537,7 @@ app.post('/api/apk/upload', requireAuth, (req, res) => {
 
 app.delete('/api/apk', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     const apkPath = path.join(APK_DIR, user.username, 'app.apk');
     if (fs.existsSync(apkPath)) fs.unlinkSync(apkPath);
 
@@ -552,7 +552,7 @@ app.delete('/api/apk', requireAuth, (req, res) => {
 
 app.get('/api/cdn-pool', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     res.json({
         urls: getCdnPool(user),
         results: Array.isArray(user.cdn_pool_results) ? user.cdn_pool_results : [],
@@ -563,7 +563,7 @@ app.get('/api/cdn-pool', requireAuth, (req, res) => {
 
 app.post('/api/cdn-pool', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     const urls = parseCdnInput(req.body.urls);
     user.cdn_pool = urls;
     saveUser(user.username, user);
@@ -572,7 +572,7 @@ app.post('/api/cdn-pool', requireAuth, (req, res) => {
 
 app.post('/api/cdn-pool/test', requireAuth, async (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     const urls = parseCdnInput(
         Array.isArray(req.body.urls) && req.body.urls.length
             ? req.body.urls
@@ -580,7 +580,7 @@ app.post('/api/cdn-pool/test', requireAuth, async (req, res) => {
     );
     const results = await Promise.all(urls.map(testCdnUrl));
     const active = results.filter(item => item.online).map(item => item.url);
-    // Guarda o último teste para não sumir ao recarregar/relogar
+    // Guarda o Ãºltimo teste para nÃ£o sumir ao recarregar/relogar
     user.cdn_pool_results = results;
     user.cdn_pool_active = active;
     user.cdn_pool_tested_at = new Date().toISOString();
@@ -590,108 +590,144 @@ app.post('/api/cdn-pool/test', requireAuth, async (req, res) => {
 
 app.delete('/api/cdn-pool', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     const target = normalizeCdnUrl(req.body.url);
     user.cdn_pool = getCdnPool(user).filter(url => url !== target);
     saveUser(user.username, user);
     res.json({ urls: user.cdn_pool });
 });
 
+function normalizeConfigPayload(nextConfig) {
+    const parsedVersion = Number(nextConfig.Version);
+    const parsedAppVersion = Number(nextConfig.AppVersion);
+    nextConfig.Version = Number.isFinite(parsedVersion) ? parsedVersion : 1;
+    nextConfig.AppVersion = Number.isFinite(parsedAppVersion) ? parsedAppVersion : nextConfig.Version;
+    nextConfig.VersionName = String(
+        nextConfig.VersionName !== undefined && nextConfig.VersionName !== null && nextConfig.VersionName !== ''
+            ? nextConfig.VersionName
+            : nextConfig.Version
+    );
+    nextConfig.UpdateApk = String(nextConfig.UpdateApk ?? '');
+    nextConfig.Actualization = (nextConfig.Actualization === true || nextConfig.Actualization === 'true' || nextConfig.Actualization === 1 || nextConfig.Actualization === '1')
+        ? 'true'
+        : 'false';
+
+    const smsIn = (nextConfig.Sms && typeof nextConfig.Sms === 'object') ? nextConfig.Sms : {};
+    nextConfig.Sms = {
+        Version: String(smsIn.Version ?? '1'),
+        Update: String(smsIn.Update ?? ''),
+        Notes: String(smsIn.Notes ?? '')
+    };
+
+    const themeIn = (nextConfig.Theme && typeof nextConfig.Theme === 'object') ? nextConfig.Theme : {};
+    nextConfig.Theme = {
+        ...themeIn,
+        Version: String(themeIn.Version ?? '1'),
+        AppName: 'ConnectPlus'
+    };
+
+    const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'Actualization', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers', 'Sms'];
+    Object.keys(nextConfig).forEach((key) => {
+        if (!allowedRootKeys.includes(key)) delete nextConfig[key];
+    });
+    nextConfig.UdpPort = String(nextConfig.UdpPort ?? '7300');
+    nextConfig.Contato = String(nextConfig.Contato ?? '');
+    nextConfig.Site = String(nextConfig.Site ?? '');
+    if (!Array.isArray(nextConfig.Servers)) nextConfig.Servers = [];
+    return nextConfig;
+}
+
+// Save completo â€” versÃµes 100% manuais (sem auto +1)
 app.post('/dashboard/save', requireAuth, (req, res) => {
     const { config_json } = req.body;
     try {
-        const nextConfig = JSON.parse(config_json);
+        const nextConfig = normalizeConfigPayload(JSON.parse(config_json));
         const user = getUser(req.user.username);
-        if (user) {
-            const previousConfig = parseUserConfig(user);
-
-            // --- Config Version: auto sobe se o conteúdo mudou ---
-            const previousVersion = Number(previousConfig.Version) || 0;
-            let submittedVersion = Number(nextConfig.Version);
-            if (!Number.isFinite(submittedVersion)) submittedVersion = previousVersion || 1;
-
-            const oldComparable = JSON.stringify({ ...previousConfig, Version: undefined });
-            const newComparable = JSON.stringify({ ...nextConfig, Version: undefined });
-            if (oldComparable !== newComparable && submittedVersion <= previousVersion) {
-                nextConfig.Version = previousVersion + 1;
-            } else {
-                nextConfig.Version = submittedVersion;
-            }
-
-            const parsedAppVersion = Number(nextConfig.AppVersion);
-            nextConfig.AppVersion = Number.isFinite(parsedAppVersion) ? parsedAppVersion : Number(nextConfig.Version) || 1;
-            nextConfig.VersionName = String(
-                nextConfig.VersionName !== undefined && nextConfig.VersionName !== null && nextConfig.VersionName !== ''
-                    ? nextConfig.VersionName
-                    : nextConfig.Version
-            );
-            nextConfig.UpdateApk = String(nextConfig.UpdateApk ?? '');
-            nextConfig.Actualization = (nextConfig.Actualization === true || nextConfig.Actualization === 'true' || nextConfig.Actualization === 1 || nextConfig.Actualization === '1')
-                ? 'true'
-                : 'false';
-
-            // --- SMS: auto sobe Version se Notes/Update mudarem ---
-            const prevSms = (previousConfig.Sms && typeof previousConfig.Sms === 'object') ? previousConfig.Sms : {};
-            const smsIn = (nextConfig.Sms && typeof nextConfig.Sms === 'object') ? nextConfig.Sms : {};
-            const prevSmsBody = JSON.stringify({ Update: String(prevSms.Update ?? ''), Notes: String(prevSms.Notes ?? '') });
-            const nextSmsBody = JSON.stringify({ Update: String(smsIn.Update ?? ''), Notes: String(smsIn.Notes ?? '') });
-            let smsVersion = Number(smsIn.Version ?? prevSms.Version ?? 1);
-            if (!Number.isFinite(smsVersion)) smsVersion = 1;
-            const prevSmsVersion = Number(prevSms.Version) || 0;
-            if (prevSmsBody !== nextSmsBody && smsVersion <= prevSmsVersion) {
-                smsVersion = prevSmsVersion + 1;
-            }
-            nextConfig.Sms = {
-                Version: String(smsVersion),
-                Update: String(smsIn.Update ?? ''),
-                Notes: String(smsIn.Notes ?? '')
-            };
-
-            // --- Theme: auto sobe Version se imagens/cores mudarem ---
-            const prevTheme = (previousConfig.Theme && typeof previousConfig.Theme === 'object') ? previousConfig.Theme : {};
-            const themeIn = (nextConfig.Theme && typeof nextConfig.Theme === 'object') ? nextConfig.Theme : {};
-            const themeKeys = ['AppName', 'ImgFundo', 'ImgLogo', 'ImgBanner', 'ImgMenu', 'ImgLogs', 'ImgCheck', 'ImgUser', 'ImgPass', 'ColorOne', 'ColorTwo', 'ColorStarter', 'ColorDialogs', 'ColorButtons', 'ImgUpdate'];
-            const pickTheme = (t) => {
-                const o = {};
-                themeKeys.forEach((k) => { o[k] = t[k] ?? ''; });
-                return o;
-            };
-            let themeVersion = Number(themeIn.Version ?? prevTheme.Version ?? 1);
-            if (!Number.isFinite(themeVersion)) themeVersion = 1;
-            const prevThemeVersion = Number(prevTheme.Version) || 0;
-            if (JSON.stringify(pickTheme(prevTheme)) !== JSON.stringify(pickTheme(themeIn)) && themeVersion <= prevThemeVersion) {
-                themeVersion = prevThemeVersion + 1;
-            }
-            nextConfig.Theme = { ...themeIn, Version: String(themeVersion), AppName: 'ConnectPlus' };
-
-            const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'Actualization', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers', 'Sms'];
-            Object.keys(nextConfig).forEach((key) => {
-                if (!allowedRootKeys.includes(key)) delete nextConfig[key];
-            });
-            nextConfig.UdpPort = String(nextConfig.UdpPort ?? '7300');
-            nextConfig.Contato = String(nextConfig.Contato ?? '');
-            nextConfig.Site = String(nextConfig.Site ?? '');
-            user.config_json = JSON.stringify(nextConfig, null, 2);
-            saveUser(user.username, user);
-            return res.json({
-                ok: true,
-                Version: nextConfig.Version,
-                AppVersion: nextConfig.AppVersion,
-                VersionName: nextConfig.VersionName,
-                Actualization: nextConfig.Actualization,
-                UpdateApk: nextConfig.UpdateApk,
-                Sms: nextConfig.Sms,
-                ThemeVersion: nextConfig.Theme && nextConfig.Theme.Version
-            });
-        } else {
-            res.status(500).send('Erro ao salvar as configurações');
-        }
+        if (!user) return res.status(500).send('Erro ao salvar as configuraÃ§Ãµes');
+        user.config_json = JSON.stringify(nextConfig, null, 2);
+        saveUser(user.username, user);
+        return res.json({
+            ok: true,
+            Version: nextConfig.Version,
+            AppVersion: nextConfig.AppVersion,
+            VersionName: nextConfig.VersionName,
+            Actualization: nextConfig.Actualization,
+            UpdateApk: nextConfig.UpdateApk,
+            Sms: nextConfig.Sms,
+            Theme: nextConfig.Theme
+        });
     } catch (e) {
-        res.status(400).send('Formato JSON inválido');
+        res.status(400).send('Formato JSON invÃ¡lido');
     }
 });
 
-// Endpoints públicos no formato esperado pelo aplicativo.
+// Salva sÃ³ SMS (nÃ£o mexe em Version da config nem no tema)
+app.post('/api/sms', requireAuth, (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    const config = parseUserConfig(user);
+    const body = req.body || {};
+    config.Sms = {
+        Version: String(body.Version ?? config.Sms?.Version ?? '1'),
+        Update: String(body.Update ?? ''),
+        Notes: String(body.Notes ?? '')
+    };
+    user.config_json = JSON.stringify(config, null, 2);
+    saveUser(user.username, user);
+    res.json({ ok: true, Sms: config.Sms });
+});
+
+// Salva sÃ³ Theme (nÃ£o mexe em Version da config nem no SMS)
+app.post('/api/theme', requireAuth, (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    const config = parseUserConfig(user);
+    const body = (req.body && typeof req.body === 'object') ? req.body : {};
+    config.Theme = {
+        ...((config.Theme && typeof config.Theme === 'object') ? config.Theme : {}),
+        ...body,
+        Version: String(body.Version ?? config.Theme?.Version ?? '1'),
+        AppName: 'ConnectPlus'
+    };
+    user.config_json = JSON.stringify(config, null, 2);
+    saveUser(user.username, user);
+    res.json({ ok: true, Theme: config.Theme });
+});
+
+// Exportar configuraÃ§Ã£o completa
+app.get('/api/config/export', requireAuth, (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    const config = parseUserConfig(user);
+    res.setHeader('Content-Disposition', `attachment; filename="c5g-config-${user.username}.json"`);
+    res.type('application/json').send(JSON.stringify(config, null, 2));
+});
+
+// Importar configuraÃ§Ã£o completa
+app.post('/api/config/import', requireAuth, (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    try {
+        let incoming = req.body;
+        if (incoming && incoming.config_json) {
+            incoming = typeof incoming.config_json === 'string'
+                ? JSON.parse(incoming.config_json)
+                : incoming.config_json;
+        }
+        if (typeof incoming === 'string') incoming = JSON.parse(incoming);
+        if (!incoming || typeof incoming !== 'object') {
+            return res.status(400).json({ error: 'JSON invÃ¡lido' });
+        }
+        const nextConfig = normalizeConfigPayload(incoming);
+        user.config_json = JSON.stringify(nextConfig, null, 2);
+        saveUser(user.username, user);
+        res.json({ ok: true, config: nextConfig });
+    } catch (e) {
+        res.status(400).json({ error: 'JSON invÃ¡lido' });
+    }
+});
+
+// Endpoints pÃºblicos no formato esperado pelo aplicativo.
 app.get('/:username/config', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
