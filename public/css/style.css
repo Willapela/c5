@@ -355,10 +355,14 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
 
 .servers-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 0.75rem;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+}
+
+.servers-header > div:first-child {
+    width: 100%;
 }
 
 .servers-actions {
@@ -366,8 +370,9 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
-    width: 210px;
+    width: 240px;
     max-width: 100%;
+    margin: 0 auto;
     flex: 0 0 auto;
 }
 
@@ -393,15 +398,21 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     cursor: pointer;
 }
 
-.servers-import-btn input {
-    display: none;
+/* só "Importar" — esconde o input nativo */
+.servers-import-btn input[type="file"] {
+    display: none !important;
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .servers-import-msg {
     color: #34d399;
     font-weight: 600;
     font-size: 0.85rem;
-    text-align: right;
+    text-align: center;
 }
 
 .servers-save-row {
@@ -410,6 +421,7 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     flex-wrap: wrap;
     gap: 0.65rem;
     align-items: center;
+    justify-content: center;
 }
 
 .save-toast {
@@ -1686,26 +1698,24 @@ body.dashboard-body {
     .page-header {
         width: 100%;
     }
-.page-header > .btn {
-    width: 100%;
-}
 
-/* não estica os botões de servidores em coluna feia no mobile */
-.page-header .servers-actions {
-    width: 100%;
-    max-width: 280px;
-}
+    .page-header > .btn {
+        width: 100%;
+    }
 
-.page-header .servers-actions .btn {
-    width: 100%;
+    .page-header .servers-actions {
+        width: 240px;
+        max-width: 90vw;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .page-header .servers-actions .btn {
+        width: 100%;
+    }
 }
 
 @media (max-width: 480px) {
-    .main-content {
-        padding-right: 0.75rem;
-        padding-left: 0.75rem;
-    }
-
     .config-card {
         padding: 0.85rem;
     }
