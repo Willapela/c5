@@ -365,8 +365,10 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 0.55rem;
-    min-width: 200px;
+    gap: 0.5rem;
+    width: 210px;
+    max-width: 100%;
+    flex: 0 0 auto;
 }
 
 .servers-add-btn {
@@ -377,14 +379,22 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
 .servers-io-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.55rem;
+    gap: 0.5rem;
     width: 100%;
 }
 
-.servers-io-row .btn {
+.servers-io-row .btn,
+.servers-import-btn {
     width: 100%;
+    min-width: 0;
+    margin: 0;
     justify-content: center;
     text-align: center;
+    cursor: pointer;
+}
+
+.servers-import-btn input {
+    display: none;
 }
 
 .servers-import-msg {
@@ -394,6 +404,13 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     text-align: right;
 }
 
+.servers-save-row {
+    margin-top: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: center;
+}
 .save-toast {
     position: fixed;
     right: 1.25rem;
@@ -1668,10 +1685,18 @@ body.dashboard-body {
     .page-header {
         width: 100%;
     }
+.page-header > .btn {
+    width: 100%;
+}
 
-    .page-header .btn {
-        width: 100%;
-    }
+/* não estica os botões de servidores em coluna feia no mobile */
+.page-header .servers-actions {
+    width: 100%;
+    max-width: 280px;
+}
+
+.page-header .servers-actions .btn {
+    width: 100%;
 }
 
 @media (max-width: 480px) {
