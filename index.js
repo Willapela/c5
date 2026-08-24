@@ -213,6 +213,40 @@ function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
 }
 
+function isAdminUser(user) {
+    return !!(user && (user.isAdmin === true || user.role === 'admin'));
+}
+
+function getExpiresAt(user) {
+    if (!user || !user.expiresAt) return null;
+    const d = new Date(user.expiresAt);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function isSubscriptionActive(user) {
+    if (!user) return false;
+    if (isAdminUser(user)) return true;
+    // Contas antigas sem expiresAt continuam ativas até definir validade
+    const exp = getExpiresAt(user);
+    if (!exp) return true;
+    return exp.getTime() > Date.now();
+}
+
+function addDaysIso(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + Number(days || 0));
+    return d.toISOString();
+}
+
+function extendUserAccess(user, days) {
+    const now = Date.now();
+    const current = getExpiresAt(user);
+    const base = current && current.getTime() > now ? new Date(current.getTime()) : new Date();
+    base.setDate(base.getDate() + Number(days || 0));
+    user.expiresAt = base.toISOString();
+    return user.expiresAt;
+}
+
 function getCdnPool(user) {
     return Array.isArray(user.cdn_pool) ? user.cdn_pool.filter(Boolean).map(String) : [];
 }
@@ -335,12 +369,32 @@ const DEFAULT_CONFIG = {
 function requireAuth(req, res, next) {
     const token = req.cookies.auth_token;
     if (!token) return res.redirect('/login');
-    
+
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) return res.redirect('/login');
-        req.user = decoded;
+        const user = getUser(decoded.username);
+        if (!user) {
+            res.clearCookie('auth_token');
+            return res.redirect('/login');
+        }
+        req.user = { id: user.id, username: user.username };
+        req.userFull = user;
         next();
     });
+}
+
+function requireActivePlan(req, res, next) {
+    const user = req.userFull || getUser(req.user && req.user.username);
+    if (!user) return res.redirect('/login');
+    if (isSubscriptionActive(user)) return next();
+    return res.redirect('/renew');
+}
+
+function requireActivePlanApi(req, res, next) {
+    const user = req.userFull || getUser(req.user && req.user.username);
+    if (!user) return res.status(401).json({ error: 'Não autenticado' });
+    if (isSubscriptionActive(user)) return next();
+    return res.status(402).json({ error: 'Plano expirado', expiresAt: user.expiresAt || null });
 }
 
 // Routes
@@ -408,7 +462,10 @@ app.post('/register', async (req, res) => {
             email,
             password: hash,
             config_json: configJsonStr,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            plan: 'trial',
+            expiresAt: addDaysIso(7),
+            isAdmin: false
         });
         res.redirect('/login');
     } catch (e) {
@@ -423,7 +480,11 @@ app.get('/api/profile', requireAuth, (req, res) => {
     res.json({
         username: user.username,
         email: user.email || '',
-        created_at: user.created_at || null
+        created_at: user.created_at || null,
+        plan: user.plan || 'trial',
+        expiresAt: user.expiresAt || null,
+        active: isSubscriptionActive(user),
+        isAdmin: isAdminUser(user)
     });
 });
 
@@ -472,11 +533,39 @@ app.get('/logout', (req, res) => {
     res.clearCookie('auth_token').redirect('/login');
 });
 
-// Dashboard
-app.get('/dashboard', requireAuth, (req, res) => {
-    const user = getUser(req.user.username);
+// Renovação / plano expirado
+app.get('/renew', requireAuth, (req, res) => {
+    const user = req.userFull || getUser(req.user.username);
     if (!user) return res.redirect('/login');
-    
+    if (isSubscriptionActive(user)) return res.redirect('/dashboard');
+    const exp = getExpiresAt(user);
+    const expLabel = exp ? exp.toLocaleString('pt-BR') : 'sem data';
+    res.status(402).send(`<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Acesso expirado</title>
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;background:#070b14;color:#f8fafc}
+.card{max-width:440px;width:92%;padding:2rem;border-radius:1.2rem;border:1px solid rgba(110,168,254,.2);background:linear-gradient(145deg,#111c2e,#09111f);box-shadow:0 24px 70px rgba(0,0,0,.4)}
+h1{margin:0 0 .75rem;font-size:1.5rem}
+p{color:#94a3b8;line-height:1.5}
+a{color:#6ea8fe}
+.badge{display:inline-block;margin:.5rem 0 1rem;padding:.35rem .7rem;border-radius:999px;background:rgba(251,113,133,.12);border:1px solid rgba(251,113,133,.28);color:#fb7185;font-size:.8rem;font-weight:700}
+</style></head>
+<body><div class="card">
+<h1>Acesso expirado</h1>
+<div class="badge">Plano inativo</div>
+<p>Sua conta <strong>${user.username}</strong> não está ativa.</p>
+<p>Validade: <strong>${expLabel}</strong></p>
+<p>Em breve você poderá renovar por aqui com PIX/cartão. Por enquanto fale com o administrador para liberar mais dias.</p>
+<p style="margin-top:1.5rem"><a href="/logout">Sair</a></p>
+</div></body></html>`);
+});
+
+// Dashboard
+app.get('/dashboard', requireAuth, requireActivePlan, (req, res) => {
+    const user = req.userFull || getUser(req.user.username);
+    if (!user) return res.redirect('/login');
+
     // Preserve the external port (for example :2000) in all generated URLs.
     const hostUrl = requestBaseUrl(req);
     const apkRelative = `/apks/${encodeURIComponent(user.username)}/app.apk`;
@@ -486,7 +575,11 @@ app.get('/dashboard', requireAuth, (req, res) => {
         user: {
             ...req.user,
             email: user.email || '',
-            created_at: user.created_at || null
+            created_at: user.created_at || null,
+            plan: user.plan || 'trial',
+            expiresAt: user.expiresAt || null,
+            active: isSubscriptionActive(user),
+            isAdmin: isAdminUser(user)
         },
         configStr: JSON.stringify(parseUserConfig(user), null, 2),
         appUrl: `${hostUrl}/${encodeURIComponent(user.username)}/config`,
@@ -499,7 +592,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
 });
 
 // Upload do APK do aplicativo (atualizaÃ§Ã£o)
-app.post('/api/apk/upload', requireAuth, (req, res) => {
+app.post('/api/apk/upload', requireAuth, requireActivePlanApi, (req, res) => {
     apkUpload.single('apk')(req, res, (err) => {
         if (err) {
             return res.status(400).json({ error: err.message || 'Falha no upload do APK' });
@@ -561,7 +654,7 @@ app.get('/api/cdn-pool', requireAuth, (req, res) => {
     });
 });
 
-app.post('/api/cdn-pool', requireAuth, (req, res) => {
+app.post('/api/cdn-pool', requireAuth, requireActivePlanApi, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     const urls = parseCdnInput(req.body.urls);
@@ -570,7 +663,7 @@ app.post('/api/cdn-pool', requireAuth, (req, res) => {
     res.json({ urls });
 });
 
-app.post('/api/cdn-pool/test', requireAuth, async (req, res) => {
+app.post('/api/cdn-pool/test', requireAuth, requireActivePlanApi, async (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     const urls = parseCdnInput(
@@ -638,7 +731,7 @@ function normalizeConfigPayload(nextConfig) {
 }
 
 // Save completo â€” versÃµes 100% manuais (sem auto +1)
-app.post('/dashboard/save', requireAuth, (req, res) => {
+app.post('/dashboard/save', requireAuth, requireActivePlanApi, (req, res) => {
     const { config_json } = req.body;
     try {
         const nextConfig = normalizeConfigPayload(JSON.parse(config_json));
@@ -662,7 +755,7 @@ app.post('/dashboard/save', requireAuth, (req, res) => {
 });
 
 // Salva sÃ³ SMS (nÃ£o mexe em Version da config nem no tema)
-app.post('/api/sms', requireAuth, (req, res) => {
+app.post('/api/sms', requireAuth, requireActivePlanApi, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     const config = parseUserConfig(user);
@@ -678,7 +771,7 @@ app.post('/api/sms', requireAuth, (req, res) => {
 });
 
 // Salva sÃ³ Theme (nÃ£o mexe em Version da config nem no SMS)
-app.post('/api/theme', requireAuth, (req, res) => {
+app.post('/api/theme', requireAuth, requireActivePlanApi, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     const config = parseUserConfig(user);
@@ -704,7 +797,7 @@ app.get('/api/config/export', requireAuth, (req, res) => {
 });
 
 // Importar configuraÃ§Ã£o completa
-app.post('/api/config/import', requireAuth, (req, res) => {
+app.post('/api/config/import', requireAuth, requireActivePlanApi, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     try {
