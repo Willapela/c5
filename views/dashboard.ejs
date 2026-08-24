@@ -179,12 +179,10 @@
                         </div>
                     </div>
                     <div style="margin-top: 1rem; display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center;">
-                        <button type="button" class="btn secondary" @click="exportConfig">⬇ Exportar config</button>
-                        <label class="btn secondary" style="margin:0; cursor:pointer;">
-                            ⬆ Importar config
-                            <input type="file" accept="application/json,.json" style="display:none" @change="importConfig">
-                        </label>
-                        <span v-if="importMsg" style="color:#34d399; font-weight:600;">{{ importMsg }}</span>
+                        <button type="button" class="btn primary" :disabled="isSaving" @click="saveConfig">
+                            {{ isSaving ? 'Salvando...' : 'Salvar configurações gerais' }}
+                        </button>
+                        <span v-if="saveStatus && activeMenu === 'general'" class="save-status-inline">{{ saveStatus }}</span>
                     </div>
                 </div>
 
@@ -245,6 +243,12 @@
                             <span v-else>Nenhum APK selecionado.</span>
                         </p>
                         <p v-if="apkUploadMsg" class="text-muted" style="margin-top:0.4rem;color:#34d399 !important;">{{ apkUploadMsg }}</p>
+                    </div>
+                    <div style="margin-top: 1rem; display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center;">
+                        <button type="button" class="btn primary" :disabled="isSaving" @click="saveConfig">
+                            {{ isSaving ? 'Salvando...' : 'Salvar dados do APK' }}
+                        </button>
+                        <small class="text-muted">Salva AppVersion, VersionName, UpdateApk e Actualization.</small>
                     </div>
                 </div>
             </div>
@@ -326,19 +330,31 @@
                         <button type="button" class="btn primary" :disabled="themeSaving" @click="saveThemeOnly">
                             {{ themeSaving ? 'Salvando tema...' : 'Salvar tema' }}
                         </button>
-                        <small class="text-muted">Salva só o tema (não altera Version da config nem SMS).</small>
+                        <span v-if="saveStatus && activeMenu === 'layout'" class="save-status-inline">{{ saveStatus }}</span>
+                        <small class="text-muted">Salva só o tema. Aumente a versão do tema para o app puxar de novo.</small>
                     </div>
                 </div>
             </div>
 
             <!-- Servers Section -->
             <div v-show="activeMenu === 'servers'">
-                <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                     <div>
                         <div class="eyebrow">CONNECTPLUS</div><h1 class="page-title">Servidores</h1>
                         <p class="text-muted">Gerencie seus servidores e IPs.</p>
                     </div>
-                    <button class="btn primary" @click="addServer">＋ Novo Servidor</button>
+                    <div style="display:flex; flex-wrap:wrap; gap:0.55rem; align-items:center;">
+                        <button type="button" class="btn secondary" @click="exportConfig">⬇ Exportar</button>
+                        <label class="btn secondary" style="margin:0; cursor:pointer;">
+                            ⬆ Importar
+                            <input type="file" accept="application/json,.json" style="display:none" @change="importConfig">
+                        </label>
+                        <button class="btn primary" @click="addServer">＋ Novo Servidor</button>
+                    </div>
+                </div>
+
+                <div v-if="importMsg" class="glass-container config-card" style="margin-bottom: 1rem;">
+                    <span style="color:#34d399; font-weight:600;">{{ importMsg }}</span>
                 </div>
                 
                 <div class="list-container">
@@ -355,6 +371,14 @@
                     <div v-if="config.Servers.length === 0" class="text-muted" style="text-align: center; padding: 2rem;">
                         Nenhum servidor encontrado. Clique em "Novo Servidor" para adicionar.
                     </div>
+                </div>
+
+                <div style="margin-top: 1.25rem; display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center;">
+                    <button type="button" class="btn primary" :disabled="isSaving" @click="saveConfig">
+                        {{ isSaving ? 'Salvando...' : 'Salvar servidores' }}
+                    </button>
+                    <span v-if="saveStatus && activeMenu === 'servers'" class="save-status-inline">{{ saveStatus }}</span>
+                    <small class="text-muted">Salva a lista de servidores. Aumente a Version em Configurações Gerais se quiser forçar o app a puxar.</small>
                 </div>
             </div>
 
@@ -392,7 +416,8 @@
                         <button type="button" class="btn primary" :disabled="smsSaving" @click="saveSmsOnly">
                             {{ smsSaving ? 'Salvando SMS...' : 'Salvar SMS' }}
                         </button>
-                        <small class="text-muted">Salva só o SMS (não altera Version da config nem tema).</small>
+                        <span v-if="saveStatus && activeMenu === 'sms'" class="save-status-inline">{{ saveStatus }}</span>
+                        <small class="text-muted">Salva só o SMS. Aumente a Version do SMS para o app puxar de novo.</small>
                     </div>
                 </div>
             </div>
@@ -561,15 +586,8 @@
 
         </main>
 
-        <!-- Floating Save Bar (fora do main para não sumir no desktop) -->
-        <div class="floating-save-bar">
-            <div class="floating-save-inner">
-                <span v-if="saveStatus" class="save-status">{{ saveStatus }}</span>
-                <button @click="saveConfig" :disabled="isSaving" class="btn primary full-width-mobile">
-                    {{ isSaving ? 'Salvando...' : 'Salvar Configurações' }}
-                </button>
-            </div>
-        </div>
+        <!-- Toast de status (sem botão flutuante global) -->
+        <div v-if="saveStatus" class="save-toast">{{ saveStatus }}</div>
     </div>
 
     <script>
@@ -749,7 +767,7 @@
                         if (data.AppVersion) this.config.AppVersion = data.AppVersion;
                         if (data.VersionName) this.config.VersionName = data.VersionName;
                         this.apkUploadMsg = '✅ APK enviado e UpdateApk atualizado.';
-                        this.saveStatus = '✅ APK publicado! Clique em Salvar Configurações se alterou versão.';
+                        this.saveStatus = '✅ APK publicado! Use “Salvar dados do APK” se mudou versão.';
                         setTimeout(() => { this.saveStatus = ''; }, 3500);
                     } catch (err) {
                         alert(err.message || 'Erro ao enviar APK');
