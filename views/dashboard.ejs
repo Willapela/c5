@@ -158,7 +158,7 @@
                         <div class="form-group">
                             <label>Versão da configuração (Version)</label>
                             <input type="number" v-model.number="config.Version" step="1">
-                            <small class="text-muted">Sobe sozinha ao salvar mudanças (para o app puxar config nova). Você ainda pode forçar um número maior.</small>
+                            <small class="text-muted">Manual: aumente quando quiser que o app puxe a config de novo.</small>
                         </div>
                         <div class="form-group">
                             <label>Porta UDP</label>
@@ -177,6 +177,14 @@
                             <input type="text" value="<%= appUrl %>" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
                             <small class="text-muted">Gerada automaticamente para o seu usuário e entregue no formato ConnectPlus.</small>
                         </div>
+                    </div>
+                    <div style="margin-top: 1rem; display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center;">
+                        <button type="button" class="btn secondary" @click="exportConfig">⬇ Exportar config</button>
+                        <label class="btn secondary" style="margin:0; cursor:pointer;">
+                            ⬆ Importar config
+                            <input type="file" accept="application/json,.json" style="display:none" @change="importConfig">
+                        </label>
+                        <span v-if="importMsg" style="color:#34d399; font-weight:600;">{{ importMsg }}</span>
                     </div>
                 </div>
 
@@ -314,7 +322,12 @@
                         <div class="form-group"><label>ColorDialogs</label><input type="text" v-model="config.Theme.ColorDialogs"></div>
                         <div class="form-group"><label>ColorButtons</label><input type="text" v-model="config.Theme.ColorButtons"></div>
                     </div>
-
+                    <div style="margin-top: 1rem; display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center;">
+                        <button type="button" class="btn primary" :disabled="themeSaving" @click="saveThemeOnly">
+                            {{ themeSaving ? 'Salvando tema...' : 'Salvar tema' }}
+                        </button>
+                        <small class="text-muted">Salva só o tema (não altera Version da config nem SMS).</small>
+                    </div>
                 </div>
             </div>
 
@@ -367,13 +380,19 @@
                         <div class="form-group">
                             <label>Version (SMS)</label>
                             <input type="text" v-model="config.Sms.Version" placeholder="1">
-                            <small class="text-muted">Sobe sozinha se a mensagem mudar. Pode forçar um número maior.</small>
+                            <small class="text-muted">Manual: aumente para o app buscar a mensagem de novo.</small>
                         </div>
                         <div class="form-group full-width">
                             <label>Notes (mensagem)</label>
                             <textarea v-model="config.Sms.Notes" rows="5" placeholder="MENSAGEM DE TESTE"></textarea>
                             <small class="text-muted">Texto que aparece no aplicativo.</small>
                         </div>
+                    </div>
+                    <div style="margin-top: 1rem; display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center;">
+                        <button type="button" class="btn primary" :disabled="smsSaving" @click="saveSmsOnly">
+                            {{ smsSaving ? 'Salvando SMS...' : 'Salvar SMS' }}
+                        </button>
+                        <small class="text-muted">Salva só o SMS (não altera Version da config nem tema).</small>
                     </div>
                 </div>
             </div>
@@ -631,6 +650,9 @@
                     apkFileName: '',
                     apkUploading: false,
                     apkUploadMsg: '',
+                    smsSaving: false,
+                    themeSaving: false,
+                    importMsg: '',
                     profile: {
                         username: '<%= user.username %>',
                         email: '<%= user.email || "" %>',
@@ -868,7 +890,6 @@
                     this.isSaving = true;
                     this.saveStatus = '';
                     try {
-                        // Garante números limpos antes de enviar
                         this.config.Version = Number(this.config.Version);
                         this.config.AppVersion = Number(this.config.AppVersion);
                         this.config.Actualization = (this.config.Actualization === true || this.config.Actualization === 'true') ? 'true' : 'false';
@@ -888,14 +909,10 @@
                             if (data.VersionName !== undefined) this.config.VersionName = String(data.VersionName);
                             if (data.Actualization !== undefined) this.config.Actualization = String(data.Actualization);
                             if (data.UpdateApk !== undefined) this.config.UpdateApk = String(data.UpdateApk);
-                            if (data.Sms) {
-                                this.config.Sms = Object.assign({ Version: '1', Update: '', Notes: '' }, this.config.Sms || {}, data.Sms);
-                            }
-                            if (data.ThemeVersion !== undefined && this.config.Theme) {
-                                this.config.Theme.Version = String(data.ThemeVersion);
-                            }
-                            this.saveStatus = `✅ Salvo! Config v${this.config.Version} · SMS v${this.config.Sms && this.config.Sms.Version} · Tema v${this.config.Theme && this.config.Theme.Version}`;
-                            setTimeout(() => { this.saveStatus = ''; }, 4500);
+                            if (data.Sms) this.config.Sms = Object.assign({ Version: '1', Update: '', Notes: '' }, data.Sms);
+                            if (data.Theme) this.config.Theme = Object.assign({}, this.config.Theme || {}, data.Theme);
+                            this.saveStatus = `✅ Config salva! Version=${this.config.Version}`;
+                            setTimeout(() => { this.saveStatus = ''; }, 3500);
                         } else {
                             alert((data && data.error) || 'Erro ao salvar as configurações no servidor.');
                         }
@@ -903,6 +920,81 @@
                         alert('Erro de conexão ao tentar salvar.');
                     } finally {
                         this.isSaving = false;
+                    }
+                },
+                async saveSmsOnly() {
+                    this.smsSaving = true;
+                    this.saveStatus = '';
+                    try {
+                        const response = await fetch('/api/sms', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify({
+                                Version: this.config.Sms.Version,
+                                Update: this.config.Sms.Update || '',
+                                Notes: this.config.Sms.Notes || ''
+                            })
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(data.error || 'Falha ao salvar SMS');
+                        if (data.Sms) this.config.Sms = Object.assign({ Version: '1', Update: '', Notes: '' }, data.Sms);
+                        this.saveStatus = `✅ SMS salvo! v${this.config.Sms.Version}`;
+                        setTimeout(() => { this.saveStatus = ''; }, 3000);
+                    } catch (err) {
+                        alert(err.message || 'Erro ao salvar SMS');
+                    } finally {
+                        this.smsSaving = false;
+                    }
+                },
+                async saveThemeOnly() {
+                    this.themeSaving = true;
+                    this.saveStatus = '';
+                    try {
+                        const response = await fetch('/api/theme', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify(this.config.Theme || {})
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(data.error || 'Falha ao salvar tema');
+                        if (data.Theme) this.config.Theme = Object.assign({}, this.config.Theme || {}, data.Theme);
+                        this.saveStatus = `✅ Tema salvo! v${this.config.Theme.Version}`;
+                        setTimeout(() => { this.saveStatus = ''; }, 3000);
+                    } catch (err) {
+                        alert(err.message || 'Erro ao salvar tema');
+                    } finally {
+                        this.themeSaving = false;
+                    }
+                },
+                exportConfig() {
+                    window.location.href = '/api/config/export';
+                },
+                async importConfig(e) {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) return;
+                    this.importMsg = '';
+                    try {
+                        const text = await file.text();
+                        const parsed = JSON.parse(text);
+                        const response = await fetch('/api/config/import', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify(parsed)
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(data.error || 'Falha ao importar');
+                        if (data.config) {
+                            this.config = Object.assign({}, this.config, data.config);
+                            if (!this.config.Sms) this.config.Sms = { Version: '1', Update: '', Notes: '' };
+                            if (!this.config.Theme) this.config.Theme = { Version: '1', AppName: 'ConnectPlus' };
+                        }
+                        this.importMsg = '✅ Importado! Recarregue se algo não aparecer.';
+                        this.saveStatus = '✅ Config importada!';
+                        setTimeout(() => { this.saveStatus = ''; this.importMsg = ''; }, 4000);
+                    } catch (err) {
+                        alert(err.message || 'JSON inválido');
+                    } finally {
+                        e.target.value = '';
                     }
                 },
                 editItem(type, index) {
