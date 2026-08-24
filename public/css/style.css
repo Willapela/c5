@@ -353,6 +353,7 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     font-size: 0.9rem;
 }
 
+/* ===== Servers layout fix (mobile + import) ===== */
 .servers-header {
     display: flex;
     flex-direction: column;
@@ -373,7 +374,6 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     width: 240px;
     max-width: 100%;
     margin: 0 auto;
-    flex: 0 0 auto;
 }
 
 .servers-add-btn {
@@ -396,16 +396,21 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     justify-content: center;
     text-align: center;
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
-/* só "Importar" — esconde o input nativo */
-.servers-import-btn input[type="file"] {
-    display: none !important;
-    position: absolute;
-    width: 0;
-    height: 0;
-    opacity: 0;
-    pointer-events: none;
+.servers-import-btn input[type="file"],
+.servers-import-btn input {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    pointer-events: none !important;
 }
 
 .servers-import-msg {
@@ -424,6 +429,21 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     justify-content: center;
 }
 
+@media (max-width: 768px) {
+    .servers-actions {
+        width: 240px;
+        max-width: 90vw;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .servers-io-row .btn,
+    .servers-import-btn {
+        min-height: 42px;
+        padding: 0.65rem 0.4rem;
+        font-size: 0.75rem;
+    }
+}
 .save-toast {
     position: fixed;
     right: 1.25rem;
