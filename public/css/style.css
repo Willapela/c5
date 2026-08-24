@@ -411,6 +411,7 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     gap: 0.65rem;
     align-items: center;
 }
+
 .save-toast {
     position: fixed;
     right: 1.25rem;
