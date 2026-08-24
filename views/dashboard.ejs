@@ -74,7 +74,7 @@
                 <div class="nav-item" :class="{active: activeMenu === 'layout'}" @click="setMenu('layout')">
                     <span class="nav-icon" aria-hidden="true">🎨</span><span>Layout e Cores</span>
                 </div>
-                <div class="nav-item" :class="{active: activeMenu === 'servers'}" @click="setMenu('servers')">
+                <div class="nav-item" :class="{active: activeMenu === 'vers'}" @click="setMenu('servers')">
                     <span class="nav-icon" aria-hidden="true">🖥️</span><span>Servidores</span>
                 </div>
                 <div class="nav-item" :class="{active: activeMenu === 'cdn'}" @click="setMenu('cdn')">
@@ -337,23 +337,22 @@
             </div>
 
             <!-- Servers Section -->
-            <div v-show="activeMenu === 'servers'">
-                <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-                    <div>
-                        <div class="eyebrow">CONNECTPLUS</div><h1 class="page-title">Servidores</h1>
-                        <p class="text-muted">Gerencie seus servidores e IPs.</p>
-                    </div>
-                    <button class="btn primary" @click="addServer">＋ Novo Servidor</button>
-                </div>
-
-                <div class="servers-io-row">
-                    <button type="button" class="btn secondary" @click="exportConfig">⬇ Exportar</button>
-                    <label class="btn secondary" style="margin:0; cursor:pointer;">
-                        ⬆ Importar
-                        <input type="file" accept="application/json,.json" style="display:none" @change="importConfig">
-                    </label>
-                    <span v-if="importMsg" style="color:#34d399; font-weight:600;">{{ importMsg }}</span>
-                </div>
+<div class="page-header servers-header">
+    <div>
+        <div class="eyebrow">CONNECTPLUS</div><h1 class="page-title">Servidores</h1>
+        <p class="text-muted">Gerencie seus servidores e IPs.</p>
+    </div>
+    <div class="servers-actions">
+        <button class="btn primary servers-add-btn" @click="addServer">＋ Novo Servidor</button>
+        <div class="servers-io-row">
+            <button type="button" class="btn secondary" @click="exportConfig">⬇ Exportar</button>
+            <label class="btn secondary" style="margin:0; cursor:pointer;">
+                ⬆ Importar
+                <input type="file" accept="application/json,.json" style="display:none" @change="importConfig">
+            </label>
+        </div>
+        <span v-if="importMsg" class="servers-import-msg">{{ importMsg }}</span>
+    </div>
                 
                 <div class="list-container">
                     <div class="list-item" v-for="(srv, index) in config.Servers" :key="index" @click="editItem('Servers', index)">
