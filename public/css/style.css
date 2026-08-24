@@ -353,12 +353,45 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     font-size: 0.9rem;
 }
 
-.servers-io-row {
+.servers-header {
     display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 0.65rem;
-    margin: 0 0 1rem;
+    gap: 0.75rem;
+}
+
+.servers-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+    min-width: 200px;
+}
+
+.servers-add-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+.servers-io-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.55rem;
+    width: 100%;
+}
+
+.servers-io-row .btn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+}
+
+.servers-import-msg {
+    color: #34d399;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-align: right;
 }
 
 .save-toast {
@@ -377,7 +410,7 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     pointer-events: none;
 }
 
-/* Toggle atualizaÃ§Ã£o do app */
+/* Toggle atualização do app */
 .actualization-toggle {
     display: flex;
     flex-wrap: wrap;
@@ -423,7 +456,7 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
     font-size: 0.85em;
 }
 
-/* CDN Pool results â€” um embaixo do outro */
+/* CDN Pool results — um embaixo do outro */
 .cdn-results-list {
     display: flex;
     flex-direction: column;
@@ -1306,7 +1339,7 @@ body.dashboard-body::before {
 .modal-body { padding: 1.4rem; }
 .modal-footer { padding: 1rem 1.4rem; border-top-color: rgba(148,163,184,0.11); background: rgba(4,9,18,0.2); }
 
-/* floating-save-bar rules consolidadas na definiÃ§Ã£o principal */
+/* floating-save-bar rules consolidadas na definição principal */
 
 @media (max-width: 980px) {
     .main-content { padding-right: 2rem; padding-left: 2rem; }
@@ -1574,7 +1607,7 @@ body.dashboard-body {
     overflow-wrap: anywhere;
 }
 
-/* floating-save-bar: left/right jÃ¡ definidos na regra principal */
+/* floating-save-bar: left/right já definidos na regra principal */
 
 @media (min-width: 1280px) {
     .main-content {
