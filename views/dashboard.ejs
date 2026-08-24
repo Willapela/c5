@@ -336,7 +336,7 @@
                 </div>
             </div>
 
-            <!-- Servers Section -->
+                        <!-- Servers Section -->
             <div v-show="activeMenu === 'servers'">
                 <div class="page-header servers-header">
                     <div>
@@ -349,9 +349,9 @@
                         <div class="servers-io-row">
                             <button type="button" class="btn secondary" @click="exportConfig">⬇ Exportar</button>
                             <label class="btn secondary servers-import-btn">
-    ⬆ Importar
-    <input type="file" accept="application/json,.json" @change="importConfig">
-</label>
+                                ⬆ Importar
+                                <input type="file" accept="application/json,.json" @change="importConfig">
+                            </label>
                         </div>
                         <span v-if="importMsg" class="servers-import-msg">{{ importMsg }}</span>
                     </div>
@@ -381,7 +381,6 @@
                     <small class="text-muted">Salva a lista de servidores. Aumente a Version em Configurações Gerais se quiser forçar o app a puxar.</small>
                 </div>
             </div>
-
             <!-- SMS Section -->
             <div v-show="activeMenu === 'sms'">
                 <div class="page-header">
