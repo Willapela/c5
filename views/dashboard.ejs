@@ -441,6 +441,16 @@
                             <input type="email" v-model="profile.email" placeholder="voce@email.com">
                         </div>
                         <div class="form-group">
+                            <label>Plano</label>
+                            <input type="text" :value="profile.plan || '—'" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                        </div>
+                        <div class="form-group">
+                            <label>Válido até</label>
+                            <input type="text" :value="profileExpiresLabel" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                            <small class="text-muted" v-if="profile.active === false" style="color:#fb7185;">Plano expirado</small>
+                            <small class="text-muted" v-else-if="profile.isAdmin">Conta admin (sem vencimento)</small>
+                        </div>
+                        <div class="form-group">
                             <label>Senha atual</label>
                             <input type="password" v-model="profile.currentPassword" placeholder="••••••••" autocomplete="current-password">
                             <small class="text-muted">Obrigatória só se for trocar a senha.</small>
@@ -673,6 +683,10 @@
                     profile: {
                         username: '<%= user.username %>',
                         email: '<%= user.email || "" %>',
+                        plan: '<%= user.plan || "trial" %>',
+                        expiresAt: '<%= user.expiresAt || "" %>',
+                        active: <%= (user.active !== false) ? 'true' : 'false' %>,
+                        isAdmin: <%= user.isAdmin ? 'true' : 'false' %>,
                         currentPassword: '',
                         newPassword: ''
                     },
@@ -690,6 +704,7 @@
             },
             mounted() {
                 this.loadCdnPool();
+                this.refreshProfile();
             },
             computed: {
                 cdnOnlineCount() {
@@ -700,6 +715,14 @@
                 },
                 isActualizationOn() {
                     return this.config.Actualization === 'true' || this.config.Actualization === true;
+                },
+                profileExpiresLabel() {
+                    if (this.profile && this.profile.isAdmin) return 'Sem vencimento (admin)';
+                    const raw = this.profile && this.profile.expiresAt;
+                    if (!raw) return 'Sem limite definido';
+                    const d = new Date(raw);
+                    if (Number.isNaN(d.getTime())) return String(raw);
+                    return d.toLocaleString('pt-BR');
                 }
             },
             methods: {
@@ -707,6 +730,19 @@
                     this.config.Actualization = on ? 'true' : 'false';
                     // Salva imediatamente para não voltar false ao recarregar
                     await this.saveConfig();
+                },
+                async refreshProfile() {
+                    try {
+                        const response = await fetch('/api/profile');
+                        const data = await response.json();
+                        if (!response.ok) return;
+                        this.profile.username = data.username || this.profile.username;
+                        this.profile.email = data.email || '';
+                        this.profile.plan = data.plan || this.profile.plan;
+                        this.profile.expiresAt = data.expiresAt || '';
+                        this.profile.active = data.active !== false;
+                        this.profile.isAdmin = !!data.isAdmin;
+                    } catch (e) { /* ignore */ }
                 },
                 async saveProfile() {
                     this.profileSaving = true;
