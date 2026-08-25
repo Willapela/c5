@@ -32,12 +32,14 @@
         .pix-key {
             font-family: ui-monospace, monospace; word-break: break-all;
             padding: .75rem; border-radius: .65rem; background: #050a13; color: #9fc5ff;
-            border: 1px solid rgba(110,168,254,.2); margin: .65rem 0;
+            border: 1px solid rgba(110,168,254,.2); margin: .65rem 0; font-size: .78rem;
         }
+        .pix-qr { max-width: 220px; width: 100%; border-radius: .75rem; margin: .75rem 0; background: #fff; padding: .5rem; }
         .topbar { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; }
         .muted { color:#8493aa; }
         .ok { color:#34d399; font-weight:600; }
         .warn { color:#fbbf24; }
+        .pay-status { margin-top: .75rem; font-weight: 700; }
     </style>
 </head>
 <body class="dashboard-body" style="display:block;">
@@ -46,7 +48,7 @@
             <div>
                 <div class="eyebrow">CONNECTPLUS</div>
                 <h1 class="page-title" style="margin-bottom:.25rem;">Planos</h1>
-                <p class="muted">Escolha um plano e pague via PIX.</p>
+                <p class="muted">Escolha um plano e pague via PIX (Mercado Pago).</p>
             </div>
             <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
                 <a class="btn secondary" href="/dashboard">Voltar ao painel</a>
@@ -84,12 +86,14 @@
 
         <div id="pixBox" class="pix-box">
             <h3 style="margin:0 0 .5rem;">Pagamento PIX</h3>
-            <p class="muted" id="pixMsg">Gere um pedido para ver a chave.</p>
+            <p class="muted" id="pixMsg">Gere um pedido para ver o QR Code.</p>
+            <img id="pixQr" class="pix-qr" alt="QR Code PIX" style="display:none;">
             <div class="pix-key" id="pixKey">—</div>
             <p><strong>Valor:</strong> <span id="pixAmount">—</span></p>
             <p><strong>Pedido:</strong> <span id="pixOrder">—</span></p>
-            <p class="muted">Após pagar, aguarde a confirmação do administrador. O acesso é liberado assim que o pagamento for confirmado.</p>
-            <button class="btn secondary" type="button" onclick="copyPix()">Copiar chave PIX</button>
+            <p class="pay-status" id="payStatus">Aguardando pagamento…</p>
+            <p class="muted">Depois de pagar, aguarde alguns segundos — o painel libera sozinho quando o Mercado Pago confirmar.</p>
+            <button class="btn secondary" type="button" onclick="copyPix()">Copiar código PIX</button>
         </div>
 
         <% if (user.isAdmin) { %>
@@ -110,6 +114,9 @@
     </div>
 
     <script>
+        let currentOrderId = null;
+        let pollTimer = null;
+
         async function buyPlan(planId) {
             const res = await fetch('/api/plans/order', {
                 method: 'POST',
@@ -118,19 +125,52 @@
             });
             const data = await res.json();
             if (!res.ok) return alert(data.error || 'Falha ao criar pedido');
+
             const box = document.getElementById('pixBox');
             box.classList.add('show');
             document.getElementById('pixMsg').textContent = (data.pix && data.pix.message) || 'Pedido criado';
-            document.getElementById('pixKey').textContent = (data.pix && data.pix.key) || 'Configure PIX_KEY no servidor';
+            const code = (data.pix && (data.pix.qrCode || data.pix.key)) || '';
+            document.getElementById('pixKey').textContent = code || 'Sem código';
             document.getElementById('pixAmount').textContent = (data.pix && data.pix.amountLabel) || '';
             document.getElementById('pixOrder').textContent = data.order.id;
+            document.getElementById('payStatus').textContent = 'Aguardando pagamento…';
+            document.getElementById('payStatus').className = 'pay-status warn';
+
+            const img = document.getElementById('pixQr');
+            if (data.pix && data.pix.qrCodeBase64) {
+                img.src = 'data:image/png;base64,' + data.pix.qrCodeBase64;
+                img.style.display = 'block';
+            } else {
+                img.style.display = 'none';
+            }
+
+            currentOrderId = data.order.id;
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(checkStatus, 4000);
             box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        async function checkStatus() {
+            if (!currentOrderId) return;
+            try {
+                const res = await fetch('/api/plans/order/' + encodeURIComponent(currentOrderId) + '/status');
+                const data = await res.json();
+                if (!res.ok) return;
+                if (data.status === 'paid' || (data.order && data.order.status === 'paid')) {
+                    clearInterval(pollTimer);
+                    document.getElementById('payStatus').textContent = '✅ Pagamento aprovado! Acesso liberado. Recarregando…';
+                    document.getElementById('payStatus').className = 'pay-status ok';
+                    setTimeout(function () { location.href = '/dashboard'; }, 2000);
+                } else {
+                    document.getElementById('payStatus').textContent = 'Status: ' + (data.status || 'pending') + ' — aguardando…';
+                }
+            } catch (e) { /* ignore */ }
         }
 
         function copyPix() {
             const key = document.getElementById('pixKey').textContent;
             if (!key || key === '—') return;
-            navigator.clipboard.writeText(key).then(() => alert('Chave PIX copiada!')).catch(() => alert(key));
+            navigator.clipboard.writeText(key).then(function () { alert('Código PIX copiado!'); }).catch(function () { alert(key); });
         }
 
         async function loadPending() {
@@ -146,13 +186,13 @@
                 el.innerHTML = '<p class="muted">Nenhum pedido pendente.</p>';
                 return;
             }
-            el.innerHTML = orders.map(o => (
-                '<div style="padding:.75rem 0;border-bottom:1px solid rgba(148,163,184,.12)">' +
-                '<div><strong>' + o.username + '</strong> · ' + o.planName + ' · R$ ' + o.price + '</div>' +
-                '<div class="muted" style="font-size:.8rem">' + o.id + '</div>' +
-                '<button class="btn primary" style="margin-top:.5rem" onclick="confirmOrder(\'' + o.id + '\')">Confirmar pagamento</button>' +
-                '</div>'
-            )).join('');
+            el.innerHTML = orders.map(function (o) {
+                return '<div style="padding:.75rem 0;border-bottom:1px solid rgba(148,163,184,.12)">' +
+                    '<div><strong>' + o.username + '</strong> · ' + o.planName + ' · R$ ' + o.price + '</div>' +
+                    '<div class="muted" style="font-size:.8rem">' + o.id + (o.paymentId ? ' · MP ' + o.paymentId : '') + '</div>' +
+                    '<button class="btn primary" style="margin-top:.5rem" onclick="confirmOrder(\'' + o.id + '\')">Confirmar pagamento</button>' +
+                    '</div>';
+            }).join('');
         }
 
         async function confirmOrder(orderId) {
@@ -160,7 +200,7 @@
             const res = await fetch('/api/admin/confirm-order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId })
+                body: JSON.stringify({ orderId: orderId })
             });
             const data = await res.json();
             if (!res.ok) return alert(data.error || 'Falha');
@@ -174,7 +214,7 @@
             const res = await fetch('/api/admin/extend', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, days })
+                body: JSON.stringify({ username: username, days: days })
             });
             const data = await res.json();
             const msg = document.getElementById('adminMsg');
