@@ -1320,3 +1320,8 @@ app.get('/:username/theme', (req, res) => {
     };
     res.type('application/json').send(theme);
 });
+console.log('Mercado Pago:', (typeof getMpAccessToken === 'function' && getMpAccessToken()) ? 'CONFIGURADO' : 'NÃO configurado (modo PIX manual)');
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`C5G Panel listening on port ${PORT}`);
+});
