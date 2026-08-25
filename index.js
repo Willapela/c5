@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const multer = require('multer');
 
 const app = express();
@@ -285,10 +286,18 @@ function buildSmsPayload(user) {
     };
 }
 
-function buildUserConfig(req, username, user) {
+function buildPublicResourceUrl(req, identifier, resource, publicPrefix = '') {
+    const prefix = String(publicPrefix || '');
+    return `${requestBaseUrl(req)}${prefix}/${encodeURIComponent(identifier)}/${resource}`;
+}
+
+function buildUpdateEntryUrl(req, uuid) {
+    return `${requestBaseUrl(req)}/u/${encodeURIComponent(uuid)}`;
+}
+
+function buildUserConfig(req, username, user, publicPrefix = '') {
     const stored = parseUserConfig(user);
-    const base = requestBaseUrl(req);
-    const configUrl = `${base}/${encodeURIComponent(username)}/config`;
+    const configUrl = buildPublicResourceUrl(req, username, 'config', publicPrefix);
     const serverKeys = ['Name', 'ColorName', 'Description', 'ColorDescription', 'FLAG', 'ServerIP', 'ServerPort', 'CheckUser', 'USER', 'PASS', 'Payload', 'ProxyIP', 'ProxyPort', 'SNI', 'Path', 'Color', 'Info'];
     const servers = Array.isArray(stored.Servers) ? stored.Servers.map((server) => {
         const clean = {};
@@ -310,7 +319,7 @@ function buildUserConfig(req, username, user) {
     };
 }
 
-function buildAppUpdate(req, username, user) {
+function buildAppUpdate(req, username, user, publicPrefix = '') {
     const stored = parseUserConfig(user);
     const actualization = (stored.Actualization === true || stored.Actualization === 'true' || stored.Actualization === 1 || stored.Actualization === '1')
         ? 'true'
@@ -318,7 +327,7 @@ function buildAppUpdate(req, username, user) {
     return {
         Version: String(stored.AppVersion ?? stored.Version ?? 1),
         VersionName: String(stored.VersionName ?? stored.Version ?? '1'),
-        Update: `${requestBaseUrl(req)}/${encodeURIComponent(username)}/config`,
+        Update: buildPublicResourceUrl(req, username, 'config', publicPrefix),
         Actualization: actualization,
         UpdateApk: stored.UpdateApk || ''
     };
@@ -356,6 +365,73 @@ function getUser(username) {
 function saveUser(username, data) {
     const file = path.join(DB_DIR, `${username}.json`);
     fs.writeFileSync(file, JSON.stringify(data, null, 2));
+}
+
+const UPDATE_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isValidUpdateUuid(value) {
+    return UPDATE_UUID_PATTERN.test(String(value || '').trim());
+}
+
+function ensureUserUpdateUuid(user) {
+    if (!user) return null;
+    if (isValidUpdateUuid(user.updateUuid)) return String(user.updateUuid).toLowerCase();
+    user.updateUuid = crypto.randomUUID();
+    saveUser(user.username, user);
+    return user.updateUuid;
+}
+
+function findUserByUpdateUuid(value) {
+    const target = String(value || '').trim().toLowerCase();
+    if (!isValidUpdateUuid(target)) return null;
+    return listUsers().find((user) => String(user.updateUuid || '').toLowerCase() === target) || null;
+}
+
+function buildThemePayload(req, username, user, publicPrefix = '') {
+    const config = parseUserConfig(user);
+    const savedTheme = (config.Theme && typeof config.Theme === 'object') ? config.Theme : {};
+    return {
+        Version: String(savedTheme.Version ?? config.Version ?? 1),
+        Update: buildPublicResourceUrl(req, username, 'theme', publicPrefix),
+        AppName: 'ConnectPlus',
+        ImgFundo: savedTheme.ImgFundo || '',
+        ImgLogo: savedTheme.ImgLogo || '',
+        ImgBanner: savedTheme.ImgBanner || '',
+        ImgMenu: savedTheme.ImgMenu || '',
+        ImgLogs: savedTheme.ImgLogs || '',
+        ImgCheck: savedTheme.ImgCheck || '',
+        ImgUser: savedTheme.ImgUser || '',
+        ImgPass: savedTheme.ImgPass || '',
+        ColorOne: savedTheme.ColorOne || '',
+        ColorTwo: savedTheme.ColorTwo || '',
+        ColorStarter: savedTheme.ColorStarter || '',
+        ColorDialogs: savedTheme.ColorDialogs || '',
+        ColorButtons: savedTheme.ColorButtons || '',
+        ImgUpdate: savedTheme.ImgUpdate || ''
+    };
+}
+
+function buildUpdateManifest(req, uuid, user) {
+    const config = parseUserConfig(user);
+    const resources = {
+        config: buildPublicResourceUrl(req, uuid, 'config', '/u'),
+        appupdate: buildPublicResourceUrl(req, uuid, 'appupdate', '/u'),
+        sms: buildPublicResourceUrl(req, uuid, 'sms', '/u'),
+        theme: buildPublicResourceUrl(req, uuid, 'theme', '/u')
+    };
+    return {
+        uuid,
+        version: String(config.Version ?? 1),
+        Update: resources.config,
+        AppUpdate: resources.appupdate,
+        SmsUpdate: resources.sms,
+        ThemeUpdate: resources.theme,
+        config: resources.config,
+        appupdate: resources.appupdate,
+        sms: resources.sms,
+        theme: resources.theme,
+        resources
+    };
 }
 
 function listUsers() {
@@ -655,6 +731,7 @@ app.post('/register', async (req, res) => {
             email,
             password: hash,
             config_json: configJsonStr,
+            updateUuid: crypto.randomUUID(),
             created_at: new Date().toISOString(),
             plan: 'trial',
             expiresAt: addDaysIso(7),
@@ -670,9 +747,12 @@ app.post('/register', async (req, res) => {
 app.get('/api/profile', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    const updateUuid = ensureUserUpdateUuid(user);
     res.json({
         username: user.username,
         email: user.email || '',
+        updateUuid,
+        updateUrl: buildUpdateEntryUrl(req, updateUuid),
         created_at: user.created_at || null,
         plan: user.plan || 'trial',
         expiresAt: user.expiresAt || null,
@@ -715,10 +795,25 @@ app.post('/api/profile', requireAuth, async (req, res) => {
     }
 
     saveUser(user.username, user);
+    const updateUuid = ensureUserUpdateUuid(user);
     res.json({
         ok: true,
         username: user.username,
-        email: user.email || ''
+        email: user.email || '',
+        updateUuid,
+        updateUrl: buildUpdateEntryUrl(req, updateUuid)
+    });
+});
+
+app.post('/api/profile/update-uuid/regenerate', requireAuth, (req, res) => {
+    const user = getUser(req.user.username);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    user.updateUuid = crypto.randomUUID();
+    saveUser(user.username, user);
+    res.json({
+        ok: true,
+        updateUuid: user.updateUuid,
+        updateUrl: buildUpdateEntryUrl(req, user.updateUuid)
     });
 });
 
@@ -1016,6 +1111,7 @@ app.get('/api/admin/orders/pending', requireAuth, (req, res) => {
 app.get('/dashboard', requireAuth, requireActivePlan, (req, res) => {
     const user = req.userFull || getUser(req.user.username);
     if (!user) return res.redirect('/login');
+    const updateUuid = ensureUserUpdateUuid(user);
 
     // Preserve the external port (for example :2000) in all generated URLs.
     const hostUrl = requestBaseUrl(req);
@@ -1026,6 +1122,7 @@ app.get('/dashboard', requireAuth, requireActivePlan, (req, res) => {
         user: {
             ...req.user,
             email: user.email || '',
+            updateUuid,
             created_at: user.created_at || null,
             plan: user.plan || 'trial',
             expiresAt: user.expiresAt || null,
@@ -1037,6 +1134,11 @@ app.get('/dashboard', requireAuth, requireActivePlan, (req, res) => {
         appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`,
         smsUrl: `${hostUrl}/${encodeURIComponent(user.username)}/sms`,
         themeUrl: `${hostUrl}/${encodeURIComponent(user.username)}/theme`,
+        updateUrl: buildUpdateEntryUrl(req, updateUuid),
+        updateConfigUrl: buildPublicResourceUrl(req, updateUuid, 'config', '/u'),
+        updateAppUpdateUrl: buildPublicResourceUrl(req, updateUuid, 'appupdate', '/u'),
+        updateSmsUrl: buildPublicResourceUrl(req, updateUuid, 'sms', '/u'),
+        updateThemeUrl: buildPublicResourceUrl(req, updateUuid, 'theme', '/u'),
         apkUrl: hasApk ? `${hostUrl}${apkRelative}` : '',
         hasApk
     });
@@ -1271,7 +1373,42 @@ app.post('/api/config/import', requireAuth, requireActivePlanApi, (req, res) => 
     }
 });
 
-// Endpoints pÃºblicos no formato esperado pelo aplicativo.
+// Resolvedor unificado: o aplicativo precisa conhecer apenas o UUID.
+app.get('/u/:uuid', (req, res) => {
+    const user = findUserByUpdateUuid(req.params.uuid);
+    if (!user) return res.status(404).json({ error: 'UUID de atualização não encontrado' });
+    const uuid = ensureUserUpdateUuid(user);
+    res.type('application/json').send(buildUpdateManifest(req, uuid, user));
+});
+
+app.get('/u/:uuid/config', (req, res) => {
+    const user = findUserByUpdateUuid(req.params.uuid);
+    if (!user) return res.status(404).send('Not Found');
+    const uuid = ensureUserUpdateUuid(user);
+    res.type('application/json').send(buildUserConfig(req, uuid, user, '/u'));
+});
+
+app.get('/u/:uuid/appupdate', (req, res) => {
+    const user = findUserByUpdateUuid(req.params.uuid);
+    if (!user) return res.status(404).send('Not Found');
+    const uuid = ensureUserUpdateUuid(user);
+    res.type('application/json').send(buildAppUpdate(req, uuid, user, '/u'));
+});
+
+app.get('/u/:uuid/sms', (req, res) => {
+    const user = findUserByUpdateUuid(req.params.uuid);
+    if (!user) return res.status(404).send('Not Found');
+    res.type('application/json').send(buildSmsPayload(user));
+});
+
+app.get('/u/:uuid/theme', (req, res) => {
+    const user = findUserByUpdateUuid(req.params.uuid);
+    if (!user) return res.status(404).send('Not Found');
+    const uuid = ensureUserUpdateUuid(user);
+    res.type('application/json').send(buildThemePayload(req, uuid, user, '/u'));
+});
+
+// Endpoints pÃºblicos no formato esperado pelo aplicativo (legado).
 app.get('/:username/config', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
@@ -1297,28 +1434,7 @@ app.get('/:username/theme', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
     if (!user) return res.status(404).send('Not Found');
-    const config = parseUserConfig(user);
-    const savedTheme = (config.Theme && typeof config.Theme === 'object') ? config.Theme : {};
-    const theme = {
-        Version: String(savedTheme.Version ?? config.Version ?? 1),
-        Update: `${requestBaseUrl(req)}/${encodeURIComponent(username)}/theme`,
-        AppName: 'ConnectPlus',
-        ImgFundo: savedTheme.ImgFundo || '',
-        ImgLogo: savedTheme.ImgLogo || '',
-        ImgBanner: savedTheme.ImgBanner || '',
-        ImgMenu: savedTheme.ImgMenu || '',
-        ImgLogs: savedTheme.ImgLogs || '',
-        ImgCheck: savedTheme.ImgCheck || '',
-        ImgUser: savedTheme.ImgUser || '',
-        ImgPass: savedTheme.ImgPass || '',
-        ColorOne: savedTheme.ColorOne || '',
-        ColorTwo: savedTheme.ColorTwo || '',
-        ColorStarter: savedTheme.ColorStarter || '',
-        ColorDialogs: savedTheme.ColorDialogs || '',
-        ColorButtons: savedTheme.ColorButtons || '',
-        ImgUpdate: savedTheme.ImgUpdate || ''
-    };
-    res.type('application/json').send(theme);
+    res.type('application/json').send(buildThemePayload(req, username, user));
 });
 console.log('Mercado Pago:', (typeof getMpAccessToken === 'function' && getMpAccessToken()) ? 'CONFIGURADO' : 'NÃO configurado (modo PIX manual)');
 
