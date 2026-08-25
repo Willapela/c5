@@ -100,6 +100,7 @@
                     <div>
                         <div style="font-weight: 600; color: #fff;"><%= user.username %></div>
                         <div style="font-size: 0.8rem; color: var(--text-muted);"><%= user.email || 'Sem e-mail' %></div>
+                        <div style="font-size: 0.68rem; color: #9fc5ff; margin-top: .25rem; word-break: break-all;" title="UUID de atualização">UUID: <%= user.updateUuid %></div>
                     </div>
                 </div>
                 <a href="/logout" class="btn danger full-width small" style="margin-top: 0.5rem;">Sair</a>
@@ -117,27 +118,42 @@
                 </div>
                 
                 <div class="glass-container config-card" style="margin-bottom: 2rem;">
-                    <h3 style="margin-bottom: 1rem; color: #fff;">Sua URL de Sincronização</h3>
-                    <p class="text-muted" style="margin-bottom: 1rem;">Cole esta URL no campo "Update URL" do seu aplicativo Conecta5G para sincronizar as configurações.</p>
+                    <h3 style="margin-bottom: 1rem; color: #fff;">Identificador único de atualização</h3>
+                    <p class="text-muted" style="margin-bottom: 1rem;">Agora o aplicativo pode usar somente este UUID. O painel resolve automaticamente os links de configuração, appupdate, tema e SMS.</p>
                     <div class="url-box" style="margin-bottom: .75rem;">
-                        <input type="text" readonly value="<%= appUrl %>" id="configUrl">
-                        <button onclick="copyUrl()" class="btn secondary">Copiar</button>
+                        <input type="text" readonly value="<%= user.updateUuid %>" id="updateUuid">
+                        <button onclick="copySpecificUrl('updateUuid')" class="btn secondary">Copiar UUID</button>
                     </div>
-                    <p class="text-muted" style="margin: .5rem 0 0;">URL do appupdate, usada somente se o aplicativo solicitar atualização do APK:</p>
+                    <p class="text-muted" style="margin: .5rem 0 0;">Endpoint unificado para o app consultar o mapa de atualizações:</p>
                     <div class="url-box" style="margin-bottom: .75rem;">
-                        <input type="text" readonly value="<%= appUpdateUrl %>" id="appUpdateUrl">
-                        <button onclick="copySpecificUrl('appUpdateUrl')" class="btn secondary">Copiar</button>
+                        <input type="text" readonly value="<%= updateUrl %>" id="updateUrl">
+                        <button onclick="copySpecificUrl('updateUrl')" class="btn secondary">Copiar URL</button>
                     </div>
-                    <p class="text-muted" style="margin: .5rem 0 0;">URL do tema do aplicativo:</p>
-                    <div class="url-box" style="margin-bottom: .75rem;">
-                        <input type="text" readonly value="<%= themeUrl %>" id="themeUrl">
-                        <button onclick="copySpecificUrl('themeUrl')" class="btn secondary">Copiar</button>
-                    </div>
-                    <p class="text-muted" style="margin: .5rem 0 0;">URL do SMS do aplicativo:</p>
-                    <div class="url-box" style="margin-bottom: 0;">
-                        <input type="text" readonly value="<%= smsUrl %>" id="smsUrl">
-                        <button onclick="copySpecificUrl('smsUrl')" class="btn secondary">Copiar</button>
-                    </div>
+                    <details style="margin-top: 1rem;">
+                        <summary style="cursor:pointer; color:#9fc5ff;">Ver links individuais (compatibilidade)</summary>
+                        <div style="padding-top:.75rem;">
+                            <p class="text-muted" style="margin: .5rem 0 0;">Configuração:</p>
+                            <div class="url-box" style="margin-bottom: .75rem;">
+                                <input type="text" readonly value="<%= updateConfigUrl %>" id="configUrl">
+                                <button onclick="copySpecificUrl('configUrl')" class="btn secondary">Copiar</button>
+                            </div>
+                            <p class="text-muted" style="margin: .5rem 0 0;">Appupdate / APK:</p>
+                            <div class="url-box" style="margin-bottom: .75rem;">
+                                <input type="text" readonly value="<%= updateAppUpdateUrl %>" id="appUpdateUrl">
+                                <button onclick="copySpecificUrl('appUpdateUrl')" class="btn secondary">Copiar</button>
+                            </div>
+                            <p class="text-muted" style="margin: .5rem 0 0;">Tema:</p>
+                            <div class="url-box" style="margin-bottom: .75rem;">
+                                <input type="text" readonly value="<%= updateThemeUrl %>" id="themeUrl">
+                                <button onclick="copySpecificUrl('themeUrl')" class="btn secondary">Copiar</button>
+                            </div>
+                            <p class="text-muted" style="margin: .5rem 0 0;">SMS:</p>
+                            <div class="url-box" style="margin-bottom: 0;">
+                                <input type="text" readonly value="<%= updateSmsUrl %>" id="smsUrl">
+                                <button onclick="copySpecificUrl('smsUrl')" class="btn secondary">Copiar</button>
+                            </div>
+                        </div>
+                    </details>
                 </div>
 
                 <div class="card-grid">
@@ -446,6 +462,17 @@
                             <label>E-mail</label>
                             <input type="email" v-model="profile.email" placeholder="voce@email.com">
                         </div>
+                        <div class="form-group full-width">
+                            <label>UUID de atualização</label>
+                            <div class="url-box">
+                                <input type="text" :value="profile.updateUuid" id="profileUpdateUuid" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                                <button type="button" class="btn secondary" onclick="copySpecificUrl('profileUpdateUuid')">Copiar</button>
+                            </div>
+                            <small class="text-muted">Use este UUID no aplicativo para resolver todas as atualizações deste painel. Regenerar invalida o UUID anterior.</small>
+                            <div style="margin-top:.65rem;">
+                                <button type="button" class="btn danger small" :disabled="profileSaving" @click="regenerateUpdateUuid">Gerar novo UUID</button>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label>Plano</label>
                             <input type="text" :value="profile.plan || '—'" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
@@ -750,6 +777,8 @@
                     profile: {
                         username: '<%= user.username %>',
                         email: '<%= user.email || "" %>',
+                        updateUuid: '<%= user.updateUuid || "" %>',
+                        updateUrl: '<%= updateUrl %>',
                         plan: '<%= user.plan || "trial" %>',
                         expiresAt: '<%= user.expiresAt || "" %>',
                         active: <%= (user.active !== false) ? 'true' : 'false' %>,
@@ -885,11 +914,35 @@
                         if (!response.ok) return;
                         this.profile.username = data.username || this.profile.username;
                         this.profile.email = data.email || '';
+                        this.profile.updateUuid = data.updateUuid || this.profile.updateUuid;
+                        this.profile.updateUrl = data.updateUrl || this.profile.updateUrl;
                         this.profile.plan = data.plan || this.profile.plan;
                         this.profile.expiresAt = data.expiresAt || '';
                         this.profile.active = data.active !== false;
                         this.profile.isAdmin = !!data.isAdmin;
                     } catch (e) { /* ignore */ }
+                },
+                async regenerateUpdateUuid() {
+                    if (!confirm('Gerar um novo UUID? O UUID anterior deixará de funcionar imediatamente.')) return;
+                    this.profileSaving = true;
+                    this.profileMsg = '';
+                    this.profileError = '';
+                    try {
+                        const response = await fetch('/api/profile/update-uuid/regenerate', {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(data.error || 'Falha ao gerar novo UUID');
+                        this.profile.updateUuid = data.updateUuid || '';
+                        this.profile.updateUrl = data.updateUrl || '';
+                        this.profileMsg = '✅ Novo UUID gerado!';
+                        setTimeout(() => { this.profileMsg = ''; }, 3500);
+                    } catch (err) {
+                        this.profileError = err.message || 'Erro ao gerar novo UUID';
+                    } finally {
+                        this.profileSaving = false;
+                    }
                 },
                 async saveProfile() {
                     this.profileSaving = true;
