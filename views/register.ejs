@@ -3,41 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Criar conta · ConnectPlus C5G Panel</title>
+    <title>Planos · ConnectPlus</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .plans-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+        .plans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+        .plan-card {
+            border: 1px solid rgba(110,168,254,.18);
+            border-radius: 1.15rem;
+            padding: 1.35rem;
+            background: linear-gradient(145deg, rgba(20,31,50,.94), rgba(8,15,28,.95));
+            box-shadow: 0 18px 45px rgba(0,0,0,.28);
+        }
+        .plan-card h3 { margin: 0 0 .35rem; font-size: 1.2rem; }
+        .plan-price { font-size: 1.85rem; font-weight: 800; color: #93c5fd; margin: .6rem 0; }
+        .plan-card p { color: #94a3b8; font-size: .9rem; line-height: 1.45; }
+        .plan-card .btn { width: 100%; margin-top: 1rem; }
+        .status-box {
+            margin-top: 1rem; padding: 1rem 1.15rem; border-radius: .9rem;
+            border: 1px solid rgba(148,163,184,.16); background: rgba(8,18,35,.55);
+        }
+        .pix-box {
+            display: none; margin-top: 1.25rem; padding: 1.15rem; border-radius: 1rem;
+            border: 1px solid rgba(52,211,153,.28); background: rgba(6,24,18,.55);
+        }
+        .pix-box.show { display: block; }
+        .pix-key {
+            font-family: ui-monospace, monospace; word-break: break-all;
+            padding: .75rem; border-radius: .65rem; background: #050a13; color: #9fc5ff;
+            border: 1px solid rgba(110,168,254,.2); margin: .65rem 0; font-size: .78rem;
+        }
+        .pix-qr { max-width: 220px; width: 100%; border-radius: .75rem; margin: .75rem 0; background: #fff; padding: .5rem; }
+        .topbar { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; }
+        .muted { color:#8493aa; }
+        .ok { color:#34d399; font-weight:600; }
+        .warn { color:#fbbf24; }
+        .pay-status { margin-top: .75rem; font-weight: 700; }
+    </style>
 </head>
-<body class="auth-body">
-    <div class="glass-container auth-box">
-        <div class="logo-area">
-            <div class="auth-mark">CP</div>
-            <div class="auth-eyebrow">CONNECTPLUS PANEL</div>
-            <h2>Criar sua conta</h2>
-            <p>Configure seu painel e obtenha uma URL personalizada.</p>
+<body class="dashboard-body" style="display:block;">
+    <div class="plans-wrap">
+        <div class="topbar">
+            <div>
+                <div class="eyebrow">CONNECTPLUS</div>
+                <h1 class="page-title" style="margin-bottom:.25rem;">Planos</h1>
+                <p class="muted">Escolha um plano e pague via PIX (Mercado Pago).</p>
+            </div>
+            <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                <a class="btn secondary" href="/dashboard">Voltar ao painel</a>
+                <a class="btn secondary" href="/logout">Sair</a>
+            </div>
         </div>
-        <% if (error) { %>
-            <div class="alert error"><%= error %></div>
+
+        <div class="status-box">
+            <div><strong>Conta:</strong> <%= user.username %></div>
+            <div><strong>Plano atual:</strong> <%= user.plan || 'trial' %></div>
+            <div>
+                <strong>Validade:</strong>
+                <% if (user.isAdmin) { %>
+                    Sem vencimento (admin)
+                <% } else if (user.expiresAt) { %>
+                    <%= new Date(user.expiresAt).toLocaleString('pt-BR') %>
+                    <% if (!user.active) { %><span class="warn"> · expirado</span><% } else { %><span class="ok"> · ativo</span><% } %>
+                <% } else { %>
+                    Sem limite definido
+                <% } %>
+            </div>
+        </div>
+
+        <div class="plans-grid">
+            <% plans.forEach(function(plan) { %>
+            <div class="plan-card">
+                <h3><%= plan.name %></h3>
+                <div class="plan-price"><%= typeof formatBRL === 'function' ? formatBRL(plan.price) : ('R$ ' + plan.price) %></div>
+                <p><%= plan.description %></p>
+                <p class="muted"><%= plan.days %> dias de acesso</p>
+                <button class="btn primary" type="button" onclick="buyPlan('<%= plan.id %>')">Pagar com PIX</button>
+            </div>
+            <% }) %>
+        </div>
+
+        <div id="pixBox" class="pix-box">
+            <h3 style="margin:0 0 .5rem;">Pagamento PIX</h3>
+            <p class="muted" id="pixMsg">Gere um pedido para ver o QR Code.</p>
+            <img id="pixQr" class="pix-qr" alt="QR Code PIX" style="display:none;">
+            <div class="pix-key" id="pixKey">—</div>
+            <p><strong>Valor:</strong> <span id="pixAmount">—</span></p>
+            <p><strong>Pedido:</strong> <span id="pixOrder">—</span></p>
+            <p class="pay-status" id="payStatus">Aguardando pagamento…</p>
+            <p class="muted">Depois de pagar, aguarde alguns segundos — o painel libera sozinho quando o Mercado Pago confirmar.</p>
+            <button class="btn secondary" type="button" onclick="copyPix()">Copiar código PIX</button>
+        </div>
+
+        <% if (user.isAdmin) { %>
+        <div class="status-box" style="margin-top:1.5rem;">
+            <h3 style="margin:0 0 .75rem;">Admin · pedidos pendentes</h3>
+            <button class="btn secondary" type="button" onclick="loadPending()">Atualizar lista</button>
+            <div id="pendingList" style="margin-top:1rem;"></div>
+            <hr style="border-color:rgba(148,163,184,.15); margin:1.25rem 0;">
+            <h4 style="margin:0 0 .5rem;">Liberar dias manualmente</h4>
+            <div style="display:flex; flex-wrap:wrap; gap:.5rem;">
+                <input id="extUser" placeholder="username" style="flex:1; min-width:140px; padding:.65rem .8rem; border-radius:.65rem; border:1px solid rgba(148,163,184,.2); background:#0b1322; color:#fff;">
+                <input id="extDays" type="number" min="1" value="30" style="width:100px; padding:.65rem .8rem; border-radius:.65rem; border:1px solid rgba(148,163,184,.2); background:#0b1322; color:#fff;">
+                <button class="btn primary" type="button" onclick="extendManual()">Liberar</button>
+            </div>
+            <p id="adminMsg" class="muted" style="margin-top:.75rem;"></p>
+        </div>
         <% } %>
-        <form action="/register" method="POST">
-            <div class="form-group">
-                <label>Usuário</label>
-                <input type="text" name="username" placeholder="seunome" required pattern="[a-zA-Z0-9]+" autocomplete="username">
-                <small class="text-muted">Apenas letras e números (usado na URL da config).</small>
-            </div>
-            <div class="form-group">
-                <label>E-mail</label>
-                <input type="email" name="email" placeholder="voce@email.com" required autocomplete="email">
-            </div>
-            <div class="form-group">
-                <label>Senha</label>
-                <input type="password" name="password" placeholder="••••••••" required minlength="6" autocomplete="new-password">
-                <small class="text-muted">Mínimo de 6 caracteres.</small>
-            </div>
-            <button type="submit" class="btn primary full-width">Criar conta</button>
-        </form>
-        <div class="auth-footer" style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">
-            Já tem uma conta? <a href="/login">Entrar</a>
-        </div>
     </div>
+
+    <script>
+        let currentOrderId = null;
+        let pollTimer = null;
+
+        async function buyPlan(planId) {
+            const res = await fetch('/api/plans/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ planId })
+            });
+            const data = await res.json();
+            if (!res.ok) return alert(data.error || 'Falha ao criar pedido');
+
+            const box = document.getElementById('pixBox');
+            box.classList.add('show');
+            document.getElementById('pixMsg').textContent = (data.pix && data.pix.message) || 'Pedido criado';
+            const code = (data.pix && (data.pix.qrCode || data.pix.key)) || '';
+            document.getElementById('pixKey').textContent = code || 'Sem código';
+            document.getElementById('pixAmount').textContent = (data.pix && data.pix.amountLabel) || '';
+            document.getElementById('pixOrder').textContent = data.order.id;
+            document.getElementById('payStatus').textContent = 'Aguardando pagamento…';
+            document.getElementById('payStatus').className = 'pay-status warn';
+
+            const img = document.getElementById('pixQr');
+            if (data.pix && data.pix.qrCodeBase64) {
+                img.src = 'data:image/png;base64,' + data.pix.qrCodeBase64;
+                img.style.display = 'block';
+            } else {
+                img.style.display = 'none';
+            }
+
+            currentOrderId = data.order.id;
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(checkStatus, 4000);
+            box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        async function checkStatus() {
+            if (!currentOrderId) return;
+            try {
+                const res = await fetch('/api/plans/order/' + encodeURIComponent(currentOrderId) + '/status');
+                const data = await res.json();
+                if (!res.ok) return;
+                if (data.status === 'paid' || (data.order && data.order.status === 'paid')) {
+                    clearInterval(pollTimer);
+                    document.getElementById('payStatus').textContent = '✅ Pagamento aprovado! Acesso liberado. Recarregando…';
+                    document.getElementById('payStatus').className = 'pay-status ok';
+                    setTimeout(function () { location.href = '/dashboard'; }, 2000);
+                } else {
+                    document.getElementById('payStatus').textContent = 'Status: ' + (data.status || 'pending') + ' — aguardando…';
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        function copyPix() {
+            const key = document.getElementById('pixKey').textContent;
+            if (!key || key === '—') return;
+            navigator.clipboard.writeText(key).then(function () { alert('Código PIX copiado!'); }).catch(function () { alert(key); });
+        }
+
+        async function loadPending() {
+            const res = await fetch('/api/admin/orders/pending');
+            const data = await res.json();
+            const el = document.getElementById('pendingList');
+            if (!res.ok) {
+                el.innerHTML = '<p class="warn">' + (data.error || 'Erro') + '</p>';
+                return;
+            }
+            const orders = data.orders || [];
+            if (!orders.length) {
+                el.innerHTML = '<p class="muted">Nenhum pedido pendente.</p>';
+                return;
+            }
+            el.innerHTML = orders.map(function (o) {
+                return '<div style="padding:.75rem 0;border-bottom:1px solid rgba(148,163,184,.12)">' +
+                    '<div><strong>' + o.username + '</strong> · ' + o.planName + ' · R$ ' + o.price + '</div>' +
+                    '<div class="muted" style="font-size:.8rem">' + o.id + (o.paymentId ? ' · MP ' + o.paymentId : '') + '</div>' +
+                    '<button class="btn primary" style="margin-top:.5rem" onclick="confirmOrder(\'' + o.id + '\')">Confirmar pagamento</button>' +
+                    '</div>';
+            }).join('');
+        }
+
+        async function confirmOrder(orderId) {
+            if (!confirm('Confirmar pagamento e liberar acesso?')) return;
+            const res = await fetch('/api/admin/confirm-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: orderId })
+            });
+            const data = await res.json();
+            if (!res.ok) return alert(data.error || 'Falha');
+            alert('Liberado! Válido até: ' + (data.expiresAt || ''));
+            loadPending();
+        }
+
+        async function extendManual() {
+            const username = document.getElementById('extUser').value.trim();
+            const days = Number(document.getElementById('extDays').value || 0);
+            const res = await fetch('/api/admin/extend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, days: days })
+            });
+            const data = await res.json();
+            const msg = document.getElementById('adminMsg');
+            if (!res.ok) {
+                msg.textContent = data.error || 'Erro';
+                msg.className = 'warn';
+                return;
+            }
+            msg.textContent = 'OK: ' + data.username + ' até ' + data.expiresAt;
+            msg.className = 'ok';
+        }
+
+        <% if (user.isAdmin) { %>loadPending();<% } %>
+    </script>
 </body>
 </html>
