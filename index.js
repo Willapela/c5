@@ -39,6 +39,8 @@ const PIX_KEY = process.env.PIX_KEY || '';
 const PIX_NAME = process.env.PIX_NAME || 'ConnectPlus';
 const PIX_CITY = process.env.PIX_CITY || 'SAO PAULO';
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+// Mercado Pago â€” mesmo fluxo do PainelPro (PIX automÃ¡tico)
+const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN || '';
 
 const ORDERS_DIR = path.join(__dirname, 'data', 'orders');
 if (!fs.existsSync(ORDERS_DIR)) {
@@ -47,6 +49,68 @@ if (!fs.existsSync(ORDERS_DIR)) {
 
 function getPlan(planId) {
     return PLANS.find((p) => p.id === String(planId || '')) || null;
+}
+
+async function mpCreatePixPayment({ amount, description, email, externalReference }) {
+    if (!MP_ACCESS_TOKEN) throw new Error('MP_ACCESS_TOKEN nÃ£o configurado');
+    const body = {
+        transaction_amount: Number(Number(amount).toFixed(2)),
+        description: String(description || 'Plano ConnectPlus').slice(0, 250),
+        payment_method_id: 'pix',
+        payer: {
+            email: String(email || 'cliente@connectplus.local')
+        },
+        external_reference: String(externalReference || ''),
+        notification_url: process.env.MP_NOTIFICATION_URL || undefined
+    };
+    const res = await fetch('https://api.mercadopago.com/v1/payments', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
+            'Content-Type': 'application/json',
+            'X-Idempotency-Key': `${externalReference || Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+        },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        const msg = data.message || data.error || JSON.stringify(data) || `HTTP ${res.status}`;
+        throw new Error(msg);
+    }
+    const tx = data.point_of_interaction && data.point_of_interaction.transaction_data
+        ? data.point_of_interaction.transaction_data
+        : {};
+    return {
+        paymentId: String(data.id),
+        status: data.status,
+        qrCode: tx.qr_code || '',
+        qrCodeBase64: tx.qr_code_base64 || '',
+        ticketUrl: tx.ticket_url || ''
+    };
+}
+
+async function mpGetPayment(paymentId) {
+    if (!MP_ACCESS_TOKEN) throw new Error('MP_ACCESS_TOKEN nÃ£o configurado');
+    const res = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`, {
+        headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+    return data;
+}
+
+function fulfillOrder(order) {
+    if (!order || order.status === 'paid') return order;
+    const target = getUser(order.username);
+    if (!target) throw new Error('UsuÃ¡rio do pedido nÃ£o encontrado');
+    extendUserAccess(target, order.days);
+    target.plan = order.planId;
+    saveUser(target.username, target);
+    order.status = 'paid';
+    order.paidAt = new Date().toISOString();
+    order.expiresAtAfter = target.expiresAt;
+    saveOrder(order);
+    return order;
 }
 
 function saveOrder(order) {
@@ -85,7 +149,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Pasta pÃºblica para APKs por usuÃ¡rio
+// Pasta pÃƒÂºblica para APKs por usuÃƒÂ¡rio
 const APK_DIR = path.join(__dirname, 'public', 'apks');
 if (!fs.existsSync(APK_DIR)) {
     fs.mkdirSync(APK_DIR, { recursive: true });
@@ -115,8 +179,8 @@ const apkUpload = multer({
     }
 });
 
-// Recursos de atualizaÃ§Ã£o do aplicativo. Os arquivos ficam em public/updates
-// para que possam ser substituÃ­dos sem misturar dados privados dos usuÃ¡rios.
+// Recursos de atualizaÃƒÂ§ÃƒÂ£o do aplicativo. Os arquivos ficam em public/updates
+// para que possam ser substituÃƒÂ­dos sem misturar dados privados dos usuÃƒÂ¡rios.
 const UPDATE_RESOURCES = {
     appupdate: 'appupdate',
     config: 'config',
@@ -131,7 +195,7 @@ function requestBaseUrl(req) {
 function parseUserConfig(user) {
     try {
         const config = JSON.parse(user.config_json || '{}');
-        // MantÃ©m apenas o contrato ConnectPlus e metadados internos necessÃ¡rios ao painel.
+        // MantÃƒÂ©m apenas o contrato ConnectPlus e metadados internos necessÃƒÂ¡rios ao painel.
         const allowedRootKeys = ['Version', 'VersionName', 'AppVersion', 'UpdateApk', 'Actualization', 'UdpPort', 'Contato', 'Site', 'Theme', 'Servers', 'Sms'];
         Object.keys(config).forEach((key) => {
             if (!allowedRootKeys.includes(key)) delete config[key];
@@ -189,7 +253,7 @@ function buildUserConfig(req, username, user) {
         return clean;
     }) : [];
 
-    // O endpoint pÃºblico segue exclusivamente o modelo ConnectPlus enviado.
+    // O endpoint pÃƒÂºblico segue exclusivamente o modelo ConnectPlus enviado.
     return {
         Version: String(stored.Version ?? 1),
         Update: configUrl,
@@ -217,14 +281,14 @@ function buildAppUpdate(req, username, user) {
 for (const [resource, filename] of Object.entries(UPDATE_RESOURCES)) {
     app.get(`/${resource}`, (req, res) => {
         const file = path.join(__dirname, 'public', 'updates', filename);
-        if (!fs.existsSync(file)) return res.status(404).json({ error: 'Recurso nÃ£o encontrado' });
+        if (!fs.existsSync(file)) return res.status(404).json({ error: 'Recurso nÃƒÂ£o encontrado' });
         res.type('application/json').sendFile(file);
     });
 }
 
 app.get('/updates/manifest.json', (req, res) => {
     const manifest = path.join(__dirname, 'public', 'updates', 'manifest.json');
-    if (!fs.existsSync(manifest)) return res.status(404).json({ error: 'Manifesto nÃ£o encontrado' });
+    if (!fs.existsSync(manifest)) return res.status(404).json({ error: 'Manifesto nÃƒÂ£o encontrado' });
     res.type('application/json').sendFile(manifest);
 });
 
@@ -271,7 +335,7 @@ function findUserByEmail(email) {
 function findUserByLogin(login) {
     const value = String(login || '').trim();
     if (!value) return null;
-    // Login aceita usuÃ¡rio ou e-mail
+    // Login aceita usuÃƒÂ¡rio ou e-mail
     if (value.includes('@')) return findUserByEmail(value);
     return getUser(value);
 }
@@ -293,7 +357,7 @@ function getExpiresAt(user) {
 function isSubscriptionActive(user) {
     if (!user) return false;
     if (isAdminUser(user)) return true;
-    // Contas antigas sem expiresAt continuam ativas até definir validade
+    // Contas antigas sem expiresAt continuam ativas atÃ© definir validade
     const exp = getExpiresAt(user);
     if (!exp) return true;
     return exp.getTime() > Date.now();
@@ -348,7 +412,7 @@ async function testCdnUrl(value) {
     let target;
     try {
         target = normalizeCdnUrl(value);
-        if (!target) throw new Error('URL invÃ¡lida');
+        if (!target) throw new Error('URL invÃƒÂ¡lida');
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 8000);
         const response = await fetch(target, {
@@ -459,7 +523,7 @@ function requireActivePlan(req, res, next) {
 
 function requireActivePlanApi(req, res, next) {
     const user = req.userFull || getUser(req.user && req.user.username);
-    if (!user) return res.status(401).json({ error: 'Não autenticado' });
+    if (!user) return res.status(401).json({ error: 'NÃ£o autenticado' });
     if (isSubscriptionActive(user)) return next();
     return res.status(402).json({ error: 'Plano expirado', expiresAt: user.expiresAt || null });
 }
@@ -478,10 +542,10 @@ app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = findUserByLogin(username);
 
-    if (!user) return res.render('login', { error: 'UsuÃ¡rio/e-mail ou senha invÃ¡lidos' });
+    if (!user) return res.render('login', { error: 'UsuÃƒÂ¡rio/e-mail ou senha invÃƒÂ¡lidos' });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.render('login', { error: 'UsuÃ¡rio/e-mail ou senha invÃ¡lidos' });
+    if (!match) return res.render('login', { error: 'UsuÃƒÂ¡rio/e-mail ou senha invÃƒÂ¡lidos' });
 
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
     res.cookie('auth_token', token).redirect('/dashboard');
@@ -497,27 +561,27 @@ app.post('/register', async (req, res) => {
     const password = String(req.body.password || '');
 
     if (!username || !email || !password) {
-        return res.render('register', { error: 'Preencha usuÃ¡rio, e-mail e senha' });
+        return res.render('register', { error: 'Preencha usuÃƒÂ¡rio, e-mail e senha' });
     }
 
     if (!/^[a-zA-Z0-9]+$/.test(username)) {
-        return res.render('register', { error: 'UsuÃ¡rio deve ser alfanumÃ©rico (sem espaÃ§os)' });
+        return res.render('register', { error: 'UsuÃƒÂ¡rio deve ser alfanumÃƒÂ©rico (sem espaÃƒÂ§os)' });
     }
 
     if (!isValidEmail(email)) {
-        return res.render('register', { error: 'E-mail invÃ¡lido' });
+        return res.render('register', { error: 'E-mail invÃƒÂ¡lido' });
     }
 
     if (password.length < 6) {
-        return res.render('register', { error: 'Senha deve ter no mÃ­nimo 6 caracteres' });
+        return res.render('register', { error: 'Senha deve ter no mÃƒÂ­nimo 6 caracteres' });
     }
 
     try {
         if (getUser(username)) {
-            return res.render('register', { error: 'Nome de usuÃ¡rio jÃ¡ existe' });
+            return res.render('register', { error: 'Nome de usuÃƒÂ¡rio jÃƒÂ¡ existe' });
         }
         if (findUserByEmail(email)) {
-            return res.render('register', { error: 'E-mail jÃ¡ cadastrado' });
+            return res.render('register', { error: 'E-mail jÃƒÂ¡ cadastrado' });
         }
 
         const hash = await bcrypt.hash(password, 10);
@@ -540,10 +604,10 @@ app.post('/register', async (req, res) => {
     }
 });
 
-// Perfil do usuÃ¡rio logado
+// Perfil do usuÃƒÂ¡rio logado
 app.get('/api/profile', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
     res.json({
         username: user.username,
         email: user.email || '',
@@ -557,7 +621,7 @@ app.get('/api/profile', requireAuth, (req, res) => {
 
 app.post('/api/profile', requireAuth, async (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
 
     const email = String(req.body.email || '').trim().toLowerCase();
     const currentPassword = String(req.body.currentPassword || '');
@@ -565,11 +629,11 @@ app.post('/api/profile', requireAuth, async (req, res) => {
 
     if (email) {
         if (!isValidEmail(email)) {
-            return res.status(400).json({ error: 'E-mail invÃ¡lido' });
+            return res.status(400).json({ error: 'E-mail invÃƒÂ¡lido' });
         }
         const other = findUserByEmail(email);
         if (other && other.username !== user.username) {
-            return res.status(400).json({ error: 'E-mail jÃ¡ estÃ¡ em uso por outra conta' });
+            return res.status(400).json({ error: 'E-mail jÃƒÂ¡ estÃƒÂ¡ em uso por outra conta' });
         }
         user.email = email;
     }
@@ -583,7 +647,7 @@ app.post('/api/profile', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Senha atual incorreta' });
         }
         if (newPassword.length < 6) {
-            return res.status(400).json({ error: 'Nova senha deve ter no mÃ­nimo 6 caracteres' });
+            return res.status(400).json({ error: 'Nova senha deve ter no mÃƒÂ­nimo 6 caracteres' });
         }
         user.password = await bcrypt.hash(newPassword, 10);
     }
@@ -600,7 +664,7 @@ app.get('/logout', (req, res) => {
     res.clearCookie('auth_token').redirect('/login');
 });
 
-// Renovação / plano expirado
+// RenovaÃ§Ã£o / plano expirado
 app.get('/renew', requireAuth, (req, res) => {
     const user = req.userFull || getUser(req.user.username);
     if (!user) return res.redirect('/login');
@@ -621,9 +685,9 @@ a{color:#6ea8fe}
 <body><div class="card">
 <h1>Acesso expirado</h1>
 <div class="badge">Plano inativo</div>
-<p>Sua conta <strong>${user.username}</strong> não está ativa.</p>
+<p>Sua conta <strong>${user.username}</strong> nÃ£o estÃ¡ ativa.</p>
 <p>Validade: <strong>${expLabel}</strong></p>
-<p>Escolha um plano e pague via PIX para liberar o acesso automaticamente após a confirmação.</p>
+<p>Escolha um plano e pague via PIX para liberar o acesso automaticamente apÃ³s a confirmaÃ§Ã£o.</p>
 <p style="margin-top:1.5rem"><a href="/planos" style="display:inline-block;padding:.7rem 1.1rem;border-radius:.7rem;background:linear-gradient(135deg,#5f9dfb,#356ff1);color:#fff;text-decoration:none;font-weight:700">Ver planos</a></p>
 <p style="margin-top:1rem"><a href="/logout">Sair</a></p>
 </div></body></html>`);
@@ -650,64 +714,152 @@ app.get('/planos', requireAuth, (req, res) => {
     });
 });
 
-app.post('/api/plans/order', requireAuth, (req, res) => {
-    const user = req.userFull || getUser(req.user.username);
-    if (!user) return res.status(401).json({ error: 'Não autenticado' });
-    const plan = getPlan(req.body.planId);
-    if (!plan) return res.status(400).json({ error: 'Plano inválido' });
+app.post('/api/plans/order', requireAuth, async (req, res) => {
+    try {
+        const user = req.userFull || getUser(req.user.username);
+        if (!user) return res.status(401).json({ error: 'NÃ£o autenticado' });
+        const plan = getPlan(req.body.planId);
+        if (!plan) return res.status(400).json({ error: 'Plano invÃ¡lido' });
 
-    const order = {
-        id: `ord_${Date.now()}_${user.username}`,
-        username: user.username,
-        planId: plan.id,
-        planName: plan.name,
-        days: plan.days,
-        price: plan.price,
-        status: 'pending',
-        method: 'pix',
-        createdAt: new Date().toISOString(),
-        paidAt: null
-    };
-    saveOrder(order);
-    res.json({
-        ok: true,
-        order,
-        pix: {
-            key: PIX_KEY || null,
-            name: PIX_NAME,
-            city: PIX_CITY,
-            amount: plan.price,
-            amountLabel: formatBRL(plan.price),
-            message: PIX_KEY
-                ? `Faça o PIX de ${formatBRL(plan.price)} para a chave informada e aguarde a confirmação.`
-                : 'Chave PIX ainda não configurada no servidor (defina PIX_KEY).'
+        const order = {
+            id: `ord_${Date.now()}_${user.username}`,
+            username: user.username,
+            planId: plan.id,
+            planName: plan.name,
+            days: plan.days,
+            price: plan.price,
+            status: 'pending',
+            method: MP_ACCESS_TOKEN ? 'mercadopago_pix' : 'pix_manual',
+            paymentId: null,
+            createdAt: new Date().toISOString(),
+            paidAt: null
+        };
+
+        // Mercado Pago PIX (PainelPro-style) â€” gera QR / copia-e-cola
+        if (MP_ACCESS_TOKEN) {
+            const email = user.email || `${user.username}@connectplus.local`;
+            const mp = await mpCreatePixPayment({
+                amount: plan.price,
+                description: `ConnectPlus ${plan.name} (${plan.days} dias)`,
+                email,
+                externalReference: order.id
+            });
+            order.paymentId = mp.paymentId;
+            order.mpStatus = mp.status;
+            saveOrder(order);
+            return res.json({
+                ok: true,
+                order,
+                pix: {
+                    provider: 'mercadopago',
+                    paymentId: mp.paymentId,
+                    key: mp.qrCode, // copia e cola PIX
+                    qrCode: mp.qrCode,
+                    qrCodeBase64: mp.qrCodeBase64,
+                    ticketUrl: mp.ticketUrl,
+                    amount: plan.price,
+                    amountLabel: formatBRL(plan.price),
+                    message: 'Escaneie o QR Code ou copie o cÃ³digo PIX. O acesso libera automÃ¡tico apÃ³s o pagamento.'
+                }
+            });
         }
-    });
+
+        // Fallback: chave PIX manual (admin confirma)
+        saveOrder(order);
+        res.json({
+            ok: true,
+            order,
+            pix: {
+                provider: 'manual',
+                key: PIX_KEY || null,
+                name: PIX_NAME,
+                city: PIX_CITY,
+                amount: plan.price,
+                amountLabel: formatBRL(plan.price),
+                message: PIX_KEY
+                    ? `FaÃ§a o PIX de ${formatBRL(plan.price)} e aguarde a confirmaÃ§Ã£o do admin.`
+                    : 'Configure MP_ACCESS_TOKEN (Mercado Pago) ou PIX_KEY no servidor.'
+            }
+        });
+    } catch (err) {
+        console.error('order error', err);
+        res.status(500).json({ error: err.message || 'Falha ao criar pagamento' });
+    }
 });
 
 // Admin confirma pagamento e libera dias
+
+
+// Consulta status do pagamento (polling no front â€” igual PainelPro verify)
+app.get('/api/plans/order/:id/status', requireAuth, async (req, res) => {
+    try {
+        const order = getOrder(req.params.id);
+        if (!order) return res.status(404).json({ error: 'Pedido nÃ£o encontrado' });
+        const user = req.userFull || getUser(req.user.username);
+        if (!user) return res.status(401).json({ error: 'NÃ£o autenticado' });
+        if (order.username !== user.username && !isAdminUser(user)) {
+            return res.status(403).json({ error: 'Sem permissÃ£o' });
+        }
+
+        if (order.status === 'paid') {
+            return res.json({ ok: true, status: 'paid', order });
+        }
+
+        // Mercado Pago: consulta API
+        if (order.paymentId && MP_ACCESS_TOKEN) {
+            const pay = await mpGetPayment(order.paymentId);
+            order.mpStatus = pay.status;
+            if (pay.status === 'approved') {
+                fulfillOrder(order);
+                return res.json({ ok: true, status: 'paid', order });
+            }
+            saveOrder(order);
+            return res.json({ ok: true, status: pay.status || 'pending', order });
+        }
+
+        res.json({ ok: true, status: order.status || 'pending', order });
+    } catch (err) {
+        console.error('status error', err);
+        res.status(500).json({ error: err.message || 'Erro ao consultar pagamento' });
+    }
+});
+
+// Webhook Mercado Pago (opcional)
+app.post('/api/webhooks/mercadopago', async (req, res) => {
+    try {
+        res.status(200).send('OK');
+        const paymentId = req.body && (req.body.data && req.body.data.id) || req.query.id || req.body.id;
+        if (!paymentId || !MP_ACCESS_TOKEN) return;
+        const pay = await mpGetPayment(paymentId);
+        if (pay.status !== 'approved') return;
+        const ref = pay.external_reference;
+        if (!ref) return;
+        const order = getOrder(ref);
+        if (!order || order.status === 'paid') return;
+        order.paymentId = String(paymentId);
+        fulfillOrder(order);
+        console.log('MP webhook: order paid', ref);
+    } catch (err) {
+        console.error('webhook mp', err);
+    }
+});
+
 app.post('/api/admin/confirm-order', requireAuth, (req, res) => {
     const admin = req.userFull || getUser(req.user.username);
     if (!isAdminUser(admin) && !(ADMIN_TOKEN && req.headers['x-admin-token'] === ADMIN_TOKEN)) {
         return res.status(403).json({ error: 'Apenas admin' });
     }
     const order = getOrder(req.body.orderId);
-    if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
-    if (order.status === 'paid') return res.json({ ok: true, order, message: 'Já estava pago' });
-
-    const target = getUser(order.username);
-    if (!target) return res.status(404).json({ error: 'Usuário do pedido não encontrado' });
-
-    extendUserAccess(target, order.days);
-    target.plan = order.planId;
-    saveUser(target.username, target);
-
-    order.status = 'paid';
-    order.paidAt = new Date().toISOString();
-    order.confirmedBy = admin.username;
-    saveOrder(order);
-
-    res.json({ ok: true, order, expiresAt: target.expiresAt });
+    if (!order) return res.status(404).json({ error: 'Pedido nÃ£o encontrado' });
+    if (order.status === 'paid') return res.json({ ok: true, order, message: 'JÃ¡ estava pago' });
+    try {
+        fulfillOrder(order);
+        order.confirmedBy = admin.username;
+        saveOrder(order);
+        res.json({ ok: true, order, expiresAt: order.expiresAtAfter });
+    } catch (err) {
+        res.status(400).json({ error: err.message || 'Falha ao confirmar' });
+    }
 });
 
 // Admin libera dias manualmente
@@ -718,9 +870,9 @@ app.post('/api/admin/extend', requireAuth, (req, res) => {
     }
     const username = String(req.body.username || '').trim();
     const days = Number(req.body.days || 0);
-    if (!username || !days || days < 1) return res.status(400).json({ error: 'username e days obrigatórios' });
+    if (!username || !days || days < 1) return res.status(400).json({ error: 'username e days obrigatÃ³rios' });
     const target = getUser(username);
-    if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (!target) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     extendUserAccess(target, days);
     if (req.body.plan) target.plan = String(req.body.plan);
     saveUser(target.username, target);
@@ -764,7 +916,7 @@ app.get('/dashboard', requireAuth, requireActivePlan, (req, res) => {
     });
 });
 
-// Upload do APK do aplicativo (atualizaÃ§Ã£o)
+// Upload do APK do aplicativo (atualizaÃƒÂ§ÃƒÂ£o)
 app.post('/api/apk/upload', requireAuth, requireActivePlanApi, (req, res) => {
     apkUpload.single('apk')(req, res, (err) => {
         if (err) {
@@ -775,7 +927,7 @@ app.post('/api/apk/upload', requireAuth, requireActivePlanApi, (req, res) => {
         }
 
         const user = getUser(req.user.username);
-        if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+        if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
 
         const hostUrl = requestBaseUrl(req);
         const apkUrl = `${hostUrl}/apks/${encodeURIComponent(user.username)}/app.apk`;
@@ -803,7 +955,7 @@ app.post('/api/apk/upload', requireAuth, requireActivePlanApi, (req, res) => {
 
 app.delete('/api/apk', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
     const apkPath = path.join(APK_DIR, user.username, 'app.apk');
     if (fs.existsSync(apkPath)) fs.unlinkSync(apkPath);
 
@@ -818,7 +970,7 @@ app.delete('/api/apk', requireAuth, (req, res) => {
 
 app.get('/api/cdn-pool', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
     res.json({
         urls: getCdnPool(user),
         results: Array.isArray(user.cdn_pool_results) ? user.cdn_pool_results : [],
@@ -829,7 +981,7 @@ app.get('/api/cdn-pool', requireAuth, (req, res) => {
 
 app.post('/api/cdn-pool', requireAuth, requireActivePlanApi, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
     const urls = parseCdnInput(req.body.urls);
     user.cdn_pool = urls;
     saveUser(user.username, user);
@@ -838,7 +990,7 @@ app.post('/api/cdn-pool', requireAuth, requireActivePlanApi, (req, res) => {
 
 app.post('/api/cdn-pool/test', requireAuth, requireActivePlanApi, async (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
     const urls = parseCdnInput(
         Array.isArray(req.body.urls) && req.body.urls.length
             ? req.body.urls
@@ -846,7 +998,7 @@ app.post('/api/cdn-pool/test', requireAuth, requireActivePlanApi, async (req, re
     );
     const results = await Promise.all(urls.map(testCdnUrl));
     const active = results.filter(item => item.online).map(item => item.url);
-    // Guarda o Ãºltimo teste para nÃ£o sumir ao recarregar/relogar
+    // Guarda o ÃƒÂºltimo teste para nÃƒÂ£o sumir ao recarregar/relogar
     user.cdn_pool_results = results;
     user.cdn_pool_active = active;
     user.cdn_pool_tested_at = new Date().toISOString();
@@ -856,7 +1008,7 @@ app.post('/api/cdn-pool/test', requireAuth, requireActivePlanApi, async (req, re
 
 app.delete('/api/cdn-pool', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
     const target = normalizeCdnUrl(req.body.url);
     user.cdn_pool = getCdnPool(user).filter(url => url !== target);
     saveUser(user.username, user);
@@ -903,13 +1055,13 @@ function normalizeConfigPayload(nextConfig) {
     return nextConfig;
 }
 
-// Save completo â€” versÃµes 100% manuais (sem auto +1)
+// Save completo Ã¢â‚¬â€ versÃƒÂµes 100% manuais (sem auto +1)
 app.post('/dashboard/save', requireAuth, requireActivePlanApi, (req, res) => {
     const { config_json } = req.body;
     try {
         const nextConfig = normalizeConfigPayload(JSON.parse(config_json));
         const user = getUser(req.user.username);
-        if (!user) return res.status(500).send('Erro ao salvar as configuraÃ§Ãµes');
+        if (!user) return res.status(500).send('Erro ao salvar as configuraÃƒÂ§ÃƒÂµes');
         user.config_json = JSON.stringify(nextConfig, null, 2);
         saveUser(user.username, user);
         return res.json({
@@ -923,14 +1075,14 @@ app.post('/dashboard/save', requireAuth, requireActivePlanApi, (req, res) => {
             Theme: nextConfig.Theme
         });
     } catch (e) {
-        res.status(400).send('Formato JSON invÃ¡lido');
+        res.status(400).send('Formato JSON invÃƒÂ¡lido');
     }
 });
 
-// Salva sÃ³ SMS (nÃ£o mexe em Version da config nem no tema)
+// Salva sÃƒÂ³ SMS (nÃƒÂ£o mexe em Version da config nem no tema)
 app.post('/api/sms', requireAuth, requireActivePlanApi, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
     const config = parseUserConfig(user);
     const body = req.body || {};
     config.Sms = {
@@ -943,10 +1095,10 @@ app.post('/api/sms', requireAuth, requireActivePlanApi, (req, res) => {
     res.json({ ok: true, Sms: config.Sms });
 });
 
-// Salva sÃ³ Theme (nÃ£o mexe em Version da config nem no SMS)
+// Salva sÃƒÂ³ Theme (nÃƒÂ£o mexe em Version da config nem no SMS)
 app.post('/api/theme', requireAuth, requireActivePlanApi, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
     const config = parseUserConfig(user);
     const body = (req.body && typeof req.body === 'object') ? req.body : {};
     config.Theme = {
@@ -960,19 +1112,19 @@ app.post('/api/theme', requireAuth, requireActivePlanApi, (req, res) => {
     res.json({ ok: true, Theme: config.Theme });
 });
 
-// Exportar configuraÃ§Ã£o completa
+// Exportar configuraÃƒÂ§ÃƒÂ£o completa
 app.get('/api/config/export', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
     const config = parseUserConfig(user);
     res.setHeader('Content-Disposition', `attachment; filename="c5g-config-${user.username}.json"`);
     res.type('application/json').send(JSON.stringify(config, null, 2));
 });
 
-// Importar configuraÃ§Ã£o completa
+// Importar configuraÃƒÂ§ÃƒÂ£o completa
 app.post('/api/config/import', requireAuth, requireActivePlanApi, (req, res) => {
     const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+    if (!user) return res.status(404).json({ error: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado' });
     try {
         let incoming = req.body;
         if (incoming && incoming.config_json) {
@@ -982,18 +1134,18 @@ app.post('/api/config/import', requireAuth, requireActivePlanApi, (req, res) => 
         }
         if (typeof incoming === 'string') incoming = JSON.parse(incoming);
         if (!incoming || typeof incoming !== 'object') {
-            return res.status(400).json({ error: 'JSON invÃ¡lido' });
+            return res.status(400).json({ error: 'JSON invÃƒÂ¡lido' });
         }
         const nextConfig = normalizeConfigPayload(incoming);
         user.config_json = JSON.stringify(nextConfig, null, 2);
         saveUser(user.username, user);
         res.json({ ok: true, config: nextConfig });
     } catch (e) {
-        res.status(400).json({ error: 'JSON invÃ¡lido' });
+        res.status(400).json({ error: 'JSON invÃƒÂ¡lido' });
     }
 });
 
-// Endpoints pÃºblicos no formato esperado pelo aplicativo.
+// Endpoints pÃƒÂºblicos no formato esperado pelo aplicativo.
 app.get('/:username/config', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
