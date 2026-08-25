@@ -86,6 +86,9 @@
                 <div class="nav-item" :class="{active: activeMenu === 'profile'}" @click="setMenu('profile')">
                     <span class="nav-icon" aria-hidden="true">👤</span><span>Meu Perfil</span>
                 </div>
+                <a class="nav-item" href="/planos" style="text-decoration:none;">
+                    <span class="nav-icon" aria-hidden="true">💳</span><span>Planos</span>
+                </a>
             </nav>
             
             <div class="sidebar-footer">
@@ -447,8 +450,9 @@
                         <div class="form-group">
                             <label>Válido até</label>
                             <input type="text" :value="profileExpiresLabel" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
-                            <small class="text-muted" v-if="profile.active === false" style="color:#fb7185;">Plano expirado</small>
+                            <small class="text-muted" v-if="profile.active === false" style="color:#fb7185;">Plano expirado — <a href="/planos">renovar</a></small>
                             <small class="text-muted" v-else-if="profile.isAdmin">Conta admin (sem vencimento)</small>
+                            <small class="text-muted" v-else><a href="/planos">Ver planos / renovar</a></small>
                         </div>
                         <div class="form-group">
                             <label>Senha atual</label>
@@ -1068,7 +1072,7 @@
                 },
                 addServer() {
                     this.config.Servers.push({
-                        Name: "Nova Configuração",
+                        Name: "Novo Servidor",
                         ColorName: "#ffffff",
                         Description: "",
                         ColorDescription: "#ffffff",
