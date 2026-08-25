@@ -10,6 +10,73 @@ const app = express();
 const PORT = Number(process.env.PORT || 2000);
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_c5g_key_for_testing';
 
+// Planos de acesso (valores em BRL). Ajuste via env se quiser.
+const PLANS = [
+    {
+        id: 'monthly',
+        name: 'Mensal',
+        days: 30,
+        price: Number(process.env.PLAN_MONTHLY_PRICE || 29.9),
+        description: 'Acesso completo por 30 dias'
+    },
+    {
+        id: 'quarterly',
+        name: 'Trimestral',
+        days: 90,
+        price: Number(process.env.PLAN_QUARTERLY_PRICE || 79.9),
+        description: 'Acesso completo por 90 dias'
+    },
+    {
+        id: 'yearly',
+        name: 'Anual',
+        days: 365,
+        price: Number(process.env.PLAN_YEARLY_PRICE || 249.9),
+        description: 'Acesso completo por 1 ano'
+    }
+];
+
+const PIX_KEY = process.env.PIX_KEY || '';
+const PIX_NAME = process.env.PIX_NAME || 'ConnectPlus';
+const PIX_CITY = process.env.PIX_CITY || 'SAO PAULO';
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+
+const ORDERS_DIR = path.join(__dirname, 'data', 'orders');
+if (!fs.existsSync(ORDERS_DIR)) {
+    fs.mkdirSync(ORDERS_DIR, { recursive: true });
+}
+
+function getPlan(planId) {
+    return PLANS.find((p) => p.id === String(planId || '')) || null;
+}
+
+function saveOrder(order) {
+    const file = path.join(ORDERS_DIR, `${order.id}.json`);
+    fs.writeFileSync(file, JSON.stringify(order, null, 2));
+    return order;
+}
+
+function getOrder(id) {
+    const file = path.join(ORDERS_DIR, `${id}.json`);
+    if (!fs.existsSync(file)) return null;
+    try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return null; }
+}
+
+function listPendingOrders() {
+    if (!fs.existsSync(ORDERS_DIR)) return [];
+    return fs.readdirSync(ORDERS_DIR)
+        .filter((n) => n.endsWith('.json'))
+        .map((n) => {
+            try { return JSON.parse(fs.readFileSync(path.join(ORDERS_DIR, n), 'utf8')); }
+            catch (e) { return null; }
+        })
+        .filter((o) => o && o.status === 'pending');
+}
+
+function formatBRL(value) {
+    return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
@@ -556,10 +623,116 @@ a{color:#6ea8fe}
 <div class="badge">Plano inativo</div>
 <p>Sua conta <strong>${user.username}</strong> não está ativa.</p>
 <p>Validade: <strong>${expLabel}</strong></p>
-<p>Em breve você poderá renovar por aqui com PIX/cartão. Por enquanto fale com o administrador para liberar mais dias.</p>
-<p style="margin-top:1.5rem"><a href="/logout">Sair</a></p>
+<p>Escolha um plano e pague via PIX para liberar o acesso automaticamente após a confirmação.</p>
+<p style="margin-top:1.5rem"><a href="/planos" style="display:inline-block;padding:.7rem 1.1rem;border-radius:.7rem;background:linear-gradient(135deg,#5f9dfb,#356ff1);color:#fff;text-decoration:none;font-weight:700">Ver planos</a></p>
+<p style="margin-top:1rem"><a href="/logout">Sair</a></p>
 </div></body></html>`);
 });
+
+
+// ===== Planos e pagamento (PIX) =====
+app.get('/planos', requireAuth, (req, res) => {
+    const user = req.userFull || getUser(req.user.username);
+    if (!user) return res.redirect('/login');
+    res.render('planos', {
+        user: {
+            username: user.username,
+            email: user.email || '',
+            plan: user.plan || 'trial',
+            expiresAt: user.expiresAt || null,
+            active: isSubscriptionActive(user),
+            isAdmin: isAdminUser(user)
+        },
+        plans: PLANS,
+        pixKey: PIX_KEY,
+        pixName: PIX_NAME,
+        formatBRL
+    });
+});
+
+app.post('/api/plans/order', requireAuth, (req, res) => {
+    const user = req.userFull || getUser(req.user.username);
+    if (!user) return res.status(401).json({ error: 'Não autenticado' });
+    const plan = getPlan(req.body.planId);
+    if (!plan) return res.status(400).json({ error: 'Plano inválido' });
+
+    const order = {
+        id: `ord_${Date.now()}_${user.username}`,
+        username: user.username,
+        planId: plan.id,
+        planName: plan.name,
+        days: plan.days,
+        price: plan.price,
+        status: 'pending',
+        method: 'pix',
+        createdAt: new Date().toISOString(),
+        paidAt: null
+    };
+    saveOrder(order);
+    res.json({
+        ok: true,
+        order,
+        pix: {
+            key: PIX_KEY || null,
+            name: PIX_NAME,
+            city: PIX_CITY,
+            amount: plan.price,
+            amountLabel: formatBRL(plan.price),
+            message: PIX_KEY
+                ? `Faça o PIX de ${formatBRL(plan.price)} para a chave informada e aguarde a confirmação.`
+                : 'Chave PIX ainda não configurada no servidor (defina PIX_KEY).'
+        }
+    });
+});
+
+// Admin confirma pagamento e libera dias
+app.post('/api/admin/confirm-order', requireAuth, (req, res) => {
+    const admin = req.userFull || getUser(req.user.username);
+    if (!isAdminUser(admin) && !(ADMIN_TOKEN && req.headers['x-admin-token'] === ADMIN_TOKEN)) {
+        return res.status(403).json({ error: 'Apenas admin' });
+    }
+    const order = getOrder(req.body.orderId);
+    if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
+    if (order.status === 'paid') return res.json({ ok: true, order, message: 'Já estava pago' });
+
+    const target = getUser(order.username);
+    if (!target) return res.status(404).json({ error: 'Usuário do pedido não encontrado' });
+
+    extendUserAccess(target, order.days);
+    target.plan = order.planId;
+    saveUser(target.username, target);
+
+    order.status = 'paid';
+    order.paidAt = new Date().toISOString();
+    order.confirmedBy = admin.username;
+    saveOrder(order);
+
+    res.json({ ok: true, order, expiresAt: target.expiresAt });
+});
+
+// Admin libera dias manualmente
+app.post('/api/admin/extend', requireAuth, (req, res) => {
+    const admin = req.userFull || getUser(req.user.username);
+    if (!isAdminUser(admin) && !(ADMIN_TOKEN && req.headers['x-admin-token'] === ADMIN_TOKEN)) {
+        return res.status(403).json({ error: 'Apenas admin' });
+    }
+    const username = String(req.body.username || '').trim();
+    const days = Number(req.body.days || 0);
+    if (!username || !days || days < 1) return res.status(400).json({ error: 'username e days obrigatórios' });
+    const target = getUser(username);
+    if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
+    extendUserAccess(target, days);
+    if (req.body.plan) target.plan = String(req.body.plan);
+    saveUser(target.username, target);
+    res.json({ ok: true, username: target.username, expiresAt: target.expiresAt, plan: target.plan });
+});
+
+app.get('/api/admin/orders/pending', requireAuth, (req, res) => {
+    const admin = req.userFull || getUser(req.user.username);
+    if (!isAdminUser(admin)) return res.status(403).json({ error: 'Apenas admin' });
+    res.json({ orders: listPendingOrders() });
+});
+
 
 // Dashboard
 app.get('/dashboard', requireAuth, requireActivePlan, (req, res) => {
