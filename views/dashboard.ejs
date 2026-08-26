@@ -54,7 +54,7 @@
         <span class="mobile-header-spacer" aria-hidden="true"></span>
     </header>
 
-    <div id="app" style="display: flex; width: 100%;">
+    <div id="app" v-cloak style="display: flex; width: 100%;">
         
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
@@ -74,7 +74,7 @@
                 <div class="nav-item" :class="{active: activeMenu === 'layout'}" @click="setMenu('layout')">
                     <span class="nav-icon" aria-hidden="true">🎨</span><span>Layout e Cores</span>
                 </div>
-                <div class="nav-item" :class="{active: activeMenu === 'vers'}" @click="setMenu('servers')">
+                <div class="nav-item" :class="{active: activeMenu === 'servers'}" @click="setMenu('servers')">
                     <span class="nav-icon" aria-hidden="true">🖥️</span><span>Servidores</span>
                 </div>
                 <div class="nav-item" :class="{active: activeMenu === 'cdn'}" @click="setMenu('cdn')">
