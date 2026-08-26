@@ -18,6 +18,9 @@
         <% if (error) { %>
             <div class="alert error"><%= error %></div>
         <% } %>
+        <% if (message) { %>
+            <div class="alert" style="border-color: rgba(52,211,153,.35); color:#a7f3d0;"><%= message %></div>
+        <% } %>
         <form action="/login" method="POST">
             <div class="form-group">
                 <label>Usuário ou e-mail</label>
@@ -27,6 +30,7 @@
                 <label>Senha</label>
                 <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password">
             </div>
+            <div style="text-align:right; margin:-.25rem 0 1rem; font-size:.85rem;"><a href="/forgot-password">Esqueci minha senha</a></div>
             <button type="submit" class="btn primary full-width">Entrar no painel</button>
         </form>
         <div class="auth-footer" style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">
