@@ -1237,7 +1237,15 @@
                             if (!this.config.Sms) this.config.Sms = { Version: '1', Update: '', Notes: '' };
                             if (!this.config.Theme) this.config.Theme = { Version: '1', AppName: 'ConnectPlus' };
                         }
-                        this.importMsg = '✅ Importado! Recarregue se algo não aparecer.';
+                        const summary = data.importSummary;
+                        if (summary && summary.source === 'external-array') {
+                            const warningText = Array.isArray(summary.warnings) && summary.warnings.length
+                                ? ` Avisos: ${summary.warnings.join(' ')}`
+                                : '';
+                            this.importMsg = `✅ ${summary.imported} servidores convertidos para o ConnectPlus.${warningText}`;
+                        } else {
+                            this.importMsg = '✅ Configuração importada com sucesso.';
+                        }
                         this.saveStatus = '✅ Config importada!';
                         setTimeout(() => { this.saveStatus = ''; this.importMsg = ''; }, 4000);
                     } catch (err) {
