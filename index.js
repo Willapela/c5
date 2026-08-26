@@ -1641,7 +1641,122 @@ app.get('/api/config/export', requireAuth, (req, res) => {
     res.type('application/json').send(JSON.stringify(config, null, 2));
 });
 
-// Importar configuraÃ§Ã£o completa
+function normalizeImportedList(value) {
+    if (Array.isArray(value)) return value.filter((item) => item !== null && item !== undefined).map((item) => String(item)).join('#');
+    if (value === null || value === undefined) return '';
+    return String(value);
+}
+
+function normalizeImportedPayload(value) {
+    return String(value ?? '')
+        .replace(/\\r\\n/g, '[lf]')
+        .replace(/\\n/g, '[lf]')
+        .replace(/\\r/g, '[lf]')
+        .replace(/\r?\n/g, '[lf]')
+        .replace(/\[crlf\]/gi, '[lf]')
+        .replace(/\[cr\]/gi, '[lf]');
+}
+
+function mapImportedMode(mode) {
+    const normalized = String(mode ?? '').trim().toUpperCase();
+    const map = {
+        SSH_DIRECT: 'Direct',
+        SSH_PROXY: 'Proxy',
+        SSL_DIRECT: 'Ssl',
+        SSL_PROXY: 'Tlsws',
+        DIRECT: 'Direct',
+        PROXY: 'Proxy',
+        SSL: 'Ssl',
+        TLSWS: 'Tlsws',
+        XHTTP: 'XHTTP'
+    };
+    return map[normalized] || 'Direct';
+}
+
+function normalizeImportedTls(value) {
+    const normalized = String(value ?? '').trim().toUpperCase();
+    return ['TLSV1.3', 'TLSV1.2', 'TLSV1.1'].includes(normalized)
+        ? normalized.replace('TLSV', 'TLSv')
+        : 'TLSv1.2';
+}
+
+function convertExternalServer(item, index) {
+    const source = item && typeof item === 'object' ? item : {};
+    const auth = source.auth && typeof source.auth === 'object' ? source.auth : {};
+    const category = source.category && typeof source.category === 'object' ? source.category : {};
+    const payload = source.config_payload && typeof source.config_payload === 'object' ? source.config_payload : {};
+    const server = source.server && typeof source.server === 'object' ? source.server : {};
+    const proxy = source.proxy && typeof source.proxy === 'object' ? source.proxy : {};
+    const mode = mapImportedMode(source.mode);
+    const categoryColor = String(category.color || '#0000ff').replace(/([A-Fa-f0-9]{6})[A-Fa-f0-9]{2}$/, '$1');
+
+    return {
+        Name: String(source.name || `Servidor ${index + 1}`),
+        ColorName: categoryColor,
+        Description: String(source.description || category.name || ''),
+        ColorDescription: categoryColor,
+        FLAG: String(source.icon || ''),
+        ServerIP: normalizeImportedList(server.host),
+        ServerPort: String(server.port ?? '443'),
+        CheckUser: String(source.url_check_user || ''),
+        USER: String(auth.username ?? ''),
+        PASS: String(auth.password ?? ''),
+        Payload: normalizeImportedPayload(payload.payload),
+        ProxyIP: normalizeImportedList(proxy.host),
+        ProxyPort: String(proxy.port ?? '443'),
+        SNI: String(payload.sni ?? ''),
+        Path: '',
+        TLSVersion: normalizeImportedTls(source.tls_version),
+        Color: categoryColor,
+        Info: mode
+    };
+}
+
+function convertExternalConfig(incoming) {
+    let items = incoming;
+    if (incoming && !Array.isArray(incoming) && typeof incoming === 'object') {
+        items = incoming.servers || incoming.Servers || incoming.configs || incoming.profiles || incoming.items;
+    }
+    if (!Array.isArray(items)) return { config: incoming, summary: null };
+
+    const servers = items.map(convertExternalServer);
+    const firstUdpPort = items
+        .flatMap((item) => Array.isArray(item?.udp_ports) ? item.udp_ports : [])
+        .find((port) => port !== null && port !== undefined && String(port).trim() !== '');
+    const firstCategory = items.find((item) => item?.category?.name)?.category?.name;
+    const summary = {
+        source: 'external-array',
+        imported: servers.length,
+        modes: servers.reduce((acc, server) => { acc[server.Info] = (acc[server.Info] || 0) + 1; return acc; }, {}),
+        udpPort: firstUdpPort !== undefined ? String(firstUdpPort) : null,
+        category: firstCategory || null,
+        warnings: []
+    };
+    if (items.some((item) => Array.isArray(item?.udp_ports) && item.udp_ports.length > 1)) {
+        summary.warnings.push('O painel usa uma única UdpPort global; foi importada a primeira porta encontrada.');
+    }
+    if (items.some((item) => item?.config_v2ray || item?.config_openvpn)) {
+        summary.warnings.push('Configurações V2Ray/OpenVPN não possuem equivalente no formato ConnectPlus e foram ignoradas.');
+    }
+    return {
+        config: {
+            Servers: servers,
+            UdpPort: firstUdpPort !== undefined ? String(firstUdpPort) : undefined,
+            Contato: '',
+            Site: '',
+            Version: 1,
+            AppVersion: 1,
+            VersionName: '1',
+            UpdateApk: '',
+            Actualization: 'false',
+            Sms: { Version: '1', Update: '', Notes: '' },
+            Theme: { Version: '1', AppName: 'ConnectPlus' }
+        },
+        summary
+    };
+}
+
+// Importar configuraÃ§Ã£o completa e converter arrays do formato externo.
 app.post('/api/config/import', requireAuth, requireActivePlanApi, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
@@ -1657,10 +1772,25 @@ app.post('/api/config/import', requireAuth, requireActivePlanApi, (req, res) => 
             return res.status(400).json({ error: 'JSON invÃ¡lido' });
         }
         const currentConfig = parseUserConfig(user);
-        const nextConfig = applyAutomaticVersions(currentConfig, normalizeConfigPayload(incoming));
+        const converted = convertExternalConfig(incoming);
+        const candidateConfig = converted.summary
+            ? {
+                ...currentConfig,
+                ...converted.config,
+                AppVersion: currentConfig.AppVersion,
+                VersionName: currentConfig.VersionName,
+                UpdateApk: currentConfig.UpdateApk,
+                Actualization: currentConfig.Actualization,
+                Contato: currentConfig.Contato,
+                Site: currentConfig.Site,
+                Sms: currentConfig.Sms,
+                Theme: currentConfig.Theme
+            }
+            : converted.config;
+        const nextConfig = applyAutomaticVersions(currentConfig, normalizeConfigPayload(candidateConfig));
         user.config_json = JSON.stringify(nextConfig, null, 2);
         saveUser(user.username, user);
-        res.json({ ok: true, config: nextConfig });
+        res.json({ ok: true, config: nextConfig, importSummary: converted.summary });
     } catch (e) {
         res.status(400).json({ error: 'JSON invÃ¡lido' });
     }
