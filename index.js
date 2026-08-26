@@ -1,4 +1,5 @@
 const express = require('express');
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
@@ -49,6 +50,9 @@ const SMTP_SECURE = String(process.env.SMTP_SECURE || '').toLowerCase() === 'tru
 const SMTP_USER = String(process.env.SMTP_USER || '').trim();
 const SMTP_PASS = String(process.env.SMTP_PASS || '');
 const SMTP_FROM = String(process.env.SMTP_FROM || SMTP_USER).trim();
+const SMTP_CONNECTION_TIMEOUT_MS = Math.max(3000, Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000));
+const SMTP_GREETING_TIMEOUT_MS = Math.max(3000, Number(process.env.SMTP_GREETING_TIMEOUT_MS || 10000));
+const SMTP_SOCKET_TIMEOUT_MS = Math.max(5000, Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 20000));
 const APP_BASE_URL = String(process.env.APP_BASE_URL || '').trim().replace(/\/$/, '');
 const RESET_TOKEN_TTL_MS = Math.max(5, Number(process.env.RESET_TOKEN_TTL_MINUTES || 30)) * 60 * 1000;
 const RESET_RATE_WINDOW_MS = 15 * 60 * 1000;
@@ -486,6 +490,9 @@ function getMailer() {
         host: SMTP_HOST,
         port: SMTP_PORT,
         secure: SMTP_SECURE,
+        connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+        greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
+        socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
         auth: { user: SMTP_USER, pass: SMTP_PASS }
     });
 }
@@ -542,6 +549,19 @@ function isPasswordResetRateLimited(req, email) {
     if (bucket.count >= RESET_RATE_MAX) return true;
     bucket.count += 1;
     return false;
+}
+
+async function verifySmtpConfiguration() {
+    if (!hasSmtpConfiguration()) {
+        console.warn('SMTP de recuperação: NÃO configurado (defina SMTP_HOST, SMTP_PORT, SMTP_USER e SMTP_PASS)');
+        return;
+    }
+    try {
+        await getMailer().verify();
+        console.log(`SMTP de recuperação: OK (${SMTP_HOST}:${SMTP_PORT})`);
+    } catch (error) {
+        console.error('SMTP de recuperação: FALHA na verificação:', error.message || error);
+    }
 }
 
 async function sendPasswordResetEmail(user, resetUrl) {
@@ -819,8 +839,12 @@ app.post('/forgot-password', async (req, res) => {
     }
 
     if (!hasSmtpConfiguration()) {
-        console.error('Password reset requested but SMTP is not configured');
-        return res.render('forgot-password', { error: null, message: genericMessage, email: '' });
+        console.error('Password reset requested but SMTP is not configured. Define SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_FROM.');
+        return res.render('forgot-password', {
+            error: 'O serviço de e-mail está temporariamente indisponível. Tente novamente mais tarde.',
+            message: null,
+            email
+        });
     }
 
     try {
@@ -831,8 +855,12 @@ app.post('/forgot-password', async (req, res) => {
     } catch (error) {
         clearPasswordResetToken(user);
         saveUser(user.username, user);
-        console.error('Password reset email error:', error.message || error);
-        return res.render('forgot-password', { error: null, message: genericMessage, email: '' });
+        console.error('Password reset email error:', error.stack || error.message || error);
+        return res.render('forgot-password', {
+            error: 'Não foi possível enviar o e-mail agora. Tente novamente mais tarde.',
+            message: null,
+            email
+        });
     }
 });
 
@@ -1705,4 +1733,5 @@ console.log('Mercado Pago:', (typeof getMpAccessToken === 'function' && getMpAcc
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`C5G Panel listening on port ${PORT}`);
+    void verifySmtpConfiguration();
 });
