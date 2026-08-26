@@ -93,6 +93,12 @@
                     <span class="nav-icon" aria-hidden="true">🛠️</span><span>Admin</span>
                 </div>
             </nav>
+            <div style="padding: 0.75rem 1rem 0;">
+                <button type="button" class="btn primary full-width" :disabled="isSaving" @click="saveAllChanges">
+                    {{ isSaving ? 'Salvando...' : 'Salvar alterações' }}
+                </button>
+                <small v-if="saveStatus" style="display:block; margin-top:.5rem; color:#34d399; text-align:center;">{{ saveStatus }}</small>
+            </div>
             
             <div class="sidebar-footer">
                 <div class="user-profile" style="cursor:pointer;" @click="setMenu('profile')">
@@ -178,9 +184,9 @@
                 <div class="glass-container config-card">
                     <div class="card-grid form-grid-2">
                         <div class="form-group">
-                            <label>Versão da configuração (Version)</label>
-                            <input type="number" v-model.number="config.Version" step="1">
-                            <small class="text-muted">Manual: aumente quando quiser que o app puxe a config de novo.</small>
+                            <label>Versão da configuração (automática)</label>
+                            <input type="text" :value="config.Version" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                            <small class="text-muted">A versão sobe automaticamente quando configurações gerais ou servidores mudarem.</small>
                         </div>
                         <div class="form-group">
                             <label>Porta UDP</label>
@@ -200,12 +206,7 @@
                             <small class="text-muted">Gerada automaticamente para o seu usuário e entregue no formato ConnectPlus.</small>
                         </div>
                     </div>
-                    <div style="margin-top: 1rem; display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center;">
-                        <button type="button" class="btn primary" :disabled="isSaving" @click="saveConfig">
-                            {{ isSaving ? 'Salvando...' : 'Salvar configurações gerais' }}
-                        </button>
-                        <span v-if="saveStatus && activeMenu === 'general'" class="save-status-inline">{{ saveStatus }}</span>
-                    </div>
+                    <p class="text-muted" style="margin-top: 1rem;">As alterações serão gravadas pelo botão <strong>Salvar alterações</strong> na barra lateral.</p>
                 </div>
 
                 <div class="glass-container config-card" style="margin-top: 1.25rem;">
@@ -266,12 +267,7 @@
                         </p>
                         <p v-if="apkUploadMsg" class="text-muted" style="margin-top:0.4rem;color:#34d399 !important;">{{ apkUploadMsg }}</p>
                     </div>
-                    <div style="margin-top: 1rem; display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center;">
-                        <button type="button" class="btn primary" :disabled="isSaving" @click="saveConfig">
-                            {{ isSaving ? 'Salvando...' : 'Salvar dados do APK' }}
-                        </button>
-                        <small class="text-muted">Salva AppVersion, VersionName, UpdateApk e Actualization.</small>
-                    </div>
+                    <p class="text-muted" style="margin-top: 1rem;">Os dados do APK continuam sendo atualizados manualmente e serão gravados pelo botão <strong>Salvar alterações</strong>.</p>
                 </div>
             </div>
 
@@ -288,9 +284,10 @@
                         <small class="text-muted">Um por linha, ou separados por vírgula ou #. Máximo 100 links.</small>
                     </div>
                     <div class="card-grid form-grid-2">
-                        <button class="btn secondary" @click="saveCdnPool">💾 Salvar pool</button>
+                        <button class="btn secondary" @click="saveCdnPool">💾 Salvar pool CDN</button>
                         <button class="btn primary" @click="testCdnPool" :disabled="cdnTesting">{{ cdnTesting ? 'Testando...' : '⚡ Testar links' }}</button>
                     </div>
+                    <p class="text-muted" style="margin-top: 1rem;">O pool CDN possui salvamento próprio. Configuração geral, servidores, SMS e tema são gravados pelo botão <strong>Salvar alterações</strong> na barra lateral.</p>
                 </div>
                 <div v-if="cdnResults.length" class="glass-container config-card">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
@@ -332,7 +329,7 @@
                     <p class="text-muted">Estrutura compatível com o tema enviado para o ConnectPlus.</p>
                     <div class="card-grid">
                         <div class="form-group"><label>Nome do aplicativo</label><input type="text" v-model="config.Theme.AppName" readonly value="ConnectPlus" style="background-color: rgba(255,255,255,0.05); color: #888; cursor: not-allowed;"></div>
-                        <div class="form-group"><label>Versão do tema</label><input type="text" v-model="config.Theme.Version"></div>
+                        <div class="form-group"><label>Versão do tema (automática)</label><input type="text" :value="config.Theme.Version" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;"><small class="text-muted">Sobe automaticamente quando o tema mudar.</small></div>
                         <div class="form-group"><label>Imagem de fundo</label><input type="url" v-model="config.Theme.ImgFundo"></div>
                         <div class="form-group"><label>Logo</label><input type="url" v-model="config.Theme.ImgLogo"></div>
                         <div class="form-group"><label>Banner</label><input type="url" v-model="config.Theme.ImgBanner"></div>
@@ -348,13 +345,7 @@
                         <div class="form-group"><label>ColorDialogs</label><input type="text" v-model="config.Theme.ColorDialogs"></div>
                         <div class="form-group"><label>ColorButtons</label><input type="text" v-model="config.Theme.ColorButtons"></div>
                     </div>
-                    <div style="margin-top: 1rem; display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center;">
-                        <button type="button" class="btn primary" :disabled="themeSaving" @click="saveThemeOnly">
-                            {{ themeSaving ? 'Salvando tema...' : 'Salvar tema' }}
-                        </button>
-                        <span v-if="saveStatus && activeMenu === 'layout'" class="save-status-inline">{{ saveStatus }}</span>
-                        <small class="text-muted">Salva só o tema. Aumente a versão do tema para o app puxar de novo.</small>
-                    </div>
+                    <p class="text-muted" style="margin-top: 1rem;">O tema será salvo junto com as demais alterações pelo botão <strong>Salvar alterações</strong>.</p>
                 </div>
             </div>
 
@@ -395,13 +386,7 @@
                     </div>
                 </div>
 
-                <div class="servers-save-row">
-                    <button type="button" class="btn primary" :disabled="isSaving" @click="saveConfig">
-                        {{ isSaving ? 'Salvando...' : 'Salvar servidores' }}
-                    </button>
-                    <span v-if="saveStatus && activeMenu === 'servers'" class="save-status-inline">{{ saveStatus }}</span>
-                    <small class="text-muted">Salva a lista de servidores. Aumente a Version em Configurações Gerais se quiser forçar o app a puxar.</small>
-                </div>
+                <p class="text-muted" style="margin-top: 1rem;">Os servidores serão salvos junto com as demais alterações pelo botão <strong>Salvar alterações</strong> na barra lateral.</p>
             </div>
             <!-- SMS Section -->
             <div v-show="activeMenu === 'sms'">
@@ -423,9 +408,9 @@
                 <div class="glass-container config-card">
                     <div class="card-grid form-grid-2">
                         <div class="form-group">
-                            <label>Version (SMS)</label>
-                            <input type="text" v-model="config.Sms.Version" placeholder="1">
-                            <small class="text-muted">Manual: aumente para o app buscar a mensagem de novo.</small>
+                            <label>Version (SMS automática)</label>
+                            <input type="text" :value="config.Sms.Version" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                            <small class="text-muted">Sobe automaticamente quando a mensagem mudar.</small>
                         </div>
                         <div class="form-group full-width">
                             <label>Notes (mensagem)</label>
@@ -433,13 +418,7 @@
                             <small class="text-muted">Texto que aparece no aplicativo.</small>
                         </div>
                     </div>
-                    <div style="margin-top: 1rem; display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center;">
-                        <button type="button" class="btn primary" :disabled="smsSaving" @click="saveSmsOnly">
-                            {{ smsSaving ? 'Salvando SMS...' : 'Salvar SMS' }}
-                        </button>
-                        <span v-if="saveStatus && activeMenu === 'sms'" class="save-status-inline">{{ saveStatus }}</span>
-                        <small class="text-muted">Salva só o SMS. Aumente a Version do SMS para o app puxar de novo.</small>
-                    </div>
+                    <p class="text-muted" style="margin-top: 1rem;">A mensagem será salva junto com as demais alterações pelo botão <strong>Salvar alterações</strong>.</p>
                 </div>
             </div>
 
@@ -1139,38 +1118,55 @@
                         window.prompt('Copie manualmente os links ativos:', text);
                     }
                 },
+                async persistConfig() {
+                    this.config.AppVersion = Number(this.config.AppVersion);
+                    this.config.Actualization = (this.config.Actualization === true || this.config.Actualization === 'true') ? 'true' : 'false';
+
+                    const response = await fetch('/dashboard/save', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ config_json: JSON.stringify(this.config) })
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || data.ok === false) {
+                        throw new Error((data && data.error) || 'Erro ao salvar as configurações no servidor.');
+                    }
+                    if (data.Version !== undefined) this.config.Version = Number(data.Version);
+                    if (data.AppVersion !== undefined) this.config.AppVersion = Number(data.AppVersion);
+                    if (data.VersionName !== undefined) this.config.VersionName = String(data.VersionName);
+                    if (data.Actualization !== undefined) this.config.Actualization = String(data.Actualization);
+                    if (data.UpdateApk !== undefined) this.config.UpdateApk = String(data.UpdateApk);
+                    if (data.Sms) this.config.Sms = Object.assign({ Version: '1', Update: '', Notes: '' }, data.Sms);
+                    if (data.Theme) this.config.Theme = Object.assign({}, this.config.Theme || {}, data.Theme);
+                    return data;
+                },
                 async saveConfig() {
+                    if (this.isSaving) return;
                     this.isSaving = true;
                     this.saveStatus = '';
                     try {
-                        this.config.Version = Number(this.config.Version);
-                        this.config.AppVersion = Number(this.config.AppVersion);
-                        this.config.Actualization = (this.config.Actualization === true || this.config.Actualization === 'true') ? 'true' : 'false';
-
-                        const response = await fetch('/dashboard/save', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({ config_json: JSON.stringify(this.config) })
-                        });
-                        const data = await response.json().catch(() => ({}));
-                        if (response.ok && data.ok !== false) {
-                            if (data.Version !== undefined) this.config.Version = Number(data.Version);
-                            if (data.AppVersion !== undefined) this.config.AppVersion = Number(data.AppVersion);
-                            if (data.VersionName !== undefined) this.config.VersionName = String(data.VersionName);
-                            if (data.Actualization !== undefined) this.config.Actualization = String(data.Actualization);
-                            if (data.UpdateApk !== undefined) this.config.UpdateApk = String(data.UpdateApk);
-                            if (data.Sms) this.config.Sms = Object.assign({ Version: '1', Update: '', Notes: '' }, data.Sms);
-                            if (data.Theme) this.config.Theme = Object.assign({}, this.config.Theme || {}, data.Theme);
-                            this.saveStatus = `✅ Config salva! Version=${this.config.Version}`;
-                            setTimeout(() => { this.saveStatus = ''; }, 3500);
-                        } else {
-                            alert((data && data.error) || 'Erro ao salvar as configurações no servidor.');
-                        }
+                        await this.persistConfig();
+                        this.saveStatus = `✅ Config salva! Version=${this.config.Version}`;
+                        setTimeout(() => { this.saveStatus = ''; }, 3500);
                     } catch (e) {
-                        alert('Erro de conexão ao tentar salvar.');
+                        alert(e.message || 'Erro ao salvar as configurações.');
+                    } finally {
+                        this.isSaving = false;
+                    }
+                },
+                async saveAllChanges() {
+                    if (this.isSaving) return;
+                    this.isSaving = true;
+                    this.saveStatus = '';
+                    try {
+                        await this.persistConfig();
+                        this.saveStatus = `✅ Configuração, servidores, SMS e tema salvos! Configuração v${this.config.Version}`;
+                        setTimeout(() => { this.saveStatus = ''; }, 4500);
+                    } catch (e) {
+                        alert(e.message || 'Erro ao salvar as alterações.');
                     } finally {
                         this.isSaving = false;
                     }
