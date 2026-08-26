@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = Number(process.env.PORT || 2000);
@@ -40,6 +41,20 @@ const PIX_KEY = process.env.PIX_KEY || '';
 const PIX_NAME = process.env.PIX_NAME || 'ConnectPlus';
 const PIX_CITY = process.env.PIX_CITY || 'SAO PAULO';
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+
+// Recuperação de senha por e-mail. As credenciais devem ficar somente nas variáveis de ambiente.
+const SMTP_HOST = String(process.env.SMTP_HOST || '').trim();
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_SECURE = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || SMTP_PORT === 465;
+const SMTP_USER = String(process.env.SMTP_USER || '').trim();
+const SMTP_PASS = String(process.env.SMTP_PASS || '');
+const SMTP_FROM = String(process.env.SMTP_FROM || SMTP_USER).trim();
+const APP_BASE_URL = String(process.env.APP_BASE_URL || '').trim().replace(/\/$/, '');
+const RESET_TOKEN_TTL_MS = Math.max(5, Number(process.env.RESET_TOKEN_TTL_MINUTES || 30)) * 60 * 1000;
+const RESET_RATE_WINDOW_MS = 15 * 60 * 1000;
+const RESET_RATE_MAX = 5;
+const resetRateBuckets = new Map();
+
 // Mercado Pago — token pode vir do painel admin (data/settings.json) ou do env
 const ORDERS_DIR = path.join(__dirname, 'data', 'orders');
 const SETTINGS_FILE = path.join(__dirname, 'data', 'settings.json');
@@ -454,6 +469,86 @@ function findUserByEmail(email) {
     return listUsers().find((u) => String(u.email || '').trim().toLowerCase() === target) || null;
 }
 
+function hasSmtpConfiguration() {
+    return Boolean(SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS && SMTP_FROM);
+}
+
+function getMailer() {
+    if (!hasSmtpConfiguration()) return null;
+    return nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_SECURE,
+        auth: { user: SMTP_USER, pass: SMTP_PASS }
+    });
+}
+
+function getAppBaseUrl(req) {
+    return APP_BASE_URL || requestBaseUrl(req);
+}
+
+function getPasswordResetUrl(req, token) {
+    return `${getAppBaseUrl(req)}/reset-password?token=${encodeURIComponent(token)}`;
+}
+
+function hashResetToken(token) {
+    return crypto.createHash('sha256').update(String(token || '')).digest('hex');
+}
+
+function issuePasswordResetToken(user) {
+    const token = crypto.randomBytes(32).toString('hex');
+    user.passwordResetTokenHash = hashResetToken(token);
+    user.passwordResetExpiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS).toISOString();
+    user.passwordResetRequestedAt = new Date().toISOString();
+    return token;
+}
+
+function findUserByResetToken(token) {
+    const value = String(token || '').trim();
+    if (!/^[a-f0-9]{64}$/i.test(value)) return null;
+    const tokenHash = hashResetToken(value);
+    const now = Date.now();
+    return listUsers().find((user) => {
+        if (!user.passwordResetTokenHash || user.passwordResetTokenHash !== tokenHash) return false;
+        const expires = new Date(user.passwordResetExpiresAt || 0).getTime();
+        return Number.isFinite(expires) && expires > now;
+    }) || null;
+}
+
+function clearPasswordResetToken(user) {
+    delete user.passwordResetTokenHash;
+    delete user.passwordResetExpiresAt;
+    delete user.passwordResetRequestedAt;
+}
+
+function isPasswordResetRateLimited(req, email) {
+    const now = Date.now();
+    for (const [key, bucket] of resetRateBuckets.entries()) {
+        if (!bucket || now - bucket.startedAt >= RESET_RATE_WINDOW_MS) resetRateBuckets.delete(key);
+    }
+    const key = `${req.ip || 'unknown'}|${String(email || '').toLowerCase()}`;
+    const bucket = resetRateBuckets.get(key);
+    if (!bucket) {
+        resetRateBuckets.set(key, { startedAt: now, count: 1 });
+        return false;
+    }
+    if (bucket.count >= RESET_RATE_MAX) return true;
+    bucket.count += 1;
+    return false;
+}
+
+async function sendPasswordResetEmail(user, resetUrl) {
+    const mailer = getMailer();
+    if (!mailer) throw new Error('SMTP não configurado');
+    await mailer.sendMail({
+        from: SMTP_FROM,
+        to: user.email,
+        subject: 'Redefinição de senha — ConnectPlus',
+        text: `Olá ${user.username},\n\nRecebemos uma solicitação para redefinir a senha da sua conta ConnectPlus.\n\nAcesse o link abaixo em até ${Math.round(RESET_TOKEN_TTL_MS / 60000)} minutos:\n${resetUrl}\n\nSe você não solicitou essa alteração, ignore esta mensagem.`,
+        html: `<p>Olá <strong>${user.username}</strong>,</p><p>Recebemos uma solicitação para redefinir a senha da sua conta ConnectPlus.</p><p>O link abaixo expira em ${Math.round(RESET_TOKEN_TTL_MS / 60000)} minutos e pode ser usado uma única vez:</p><p><a href="${resetUrl}">Redefinir minha senha</a></p><p>Se você não solicitou essa alteração, ignore esta mensagem.</p>`
+    });
+}
+
 function findUserByLogin(login) {
     const value = String(login || '').trim();
     if (!value) return null;
@@ -673,20 +768,110 @@ app.get('/', (req, res) => {
 
 // Auth Routes
 app.get('/login', (req, res) => {
-    res.render('login', { error: null });
+    const message = req.query.reset === '1' ? 'Senha redefinida com sucesso. Faça login com a nova senha.' : null;
+    res.render('login', { error: null, message });
 });
 
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = findUserByLogin(username);
 
-    if (!user) return res.render('login', { error: 'UsuÃ¡rio/e-mail ou senha invÃ¡lidos' });
+    if (!user) return res.render('login', { error: 'UsuÃ¡rio/e-mail ou senha invÃ¡lidos', message: null });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.render('login', { error: 'UsuÃ¡rio/e-mail ou senha invÃ¡lidos' });
+    if (!match) return res.render('login', { error: 'UsuÃ¡rio/e-mail ou senha invÃ¡lidos', message: null });
 
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
     res.cookie('auth_token', token).redirect('/dashboard');
+});
+
+app.get('/forgot-password', (req, res) => {
+    res.set('Referrer-Policy', 'no-referrer');
+    res.render('forgot-password', { error: null, message: null, email: '' });
+});
+
+app.post('/forgot-password', async (req, res) => {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const genericMessage = 'Se existir uma conta com esse e-mail, enviaremos um link para redefinir a senha.';
+
+    if (!isValidEmail(email)) {
+        return res.render('forgot-password', {
+            error: 'Informe um e-mail válido.',
+            message: null,
+            email
+        });
+    }
+
+    if (isPasswordResetRateLimited(req, email)) {
+        return res.render('forgot-password', { error: null, message: genericMessage, email: '' });
+    }
+
+    const user = findUserByEmail(email);
+    if (!user) {
+        return res.render('forgot-password', { error: null, message: genericMessage, email: '' });
+    }
+
+    if (!hasSmtpConfiguration()) {
+        console.error('Password reset requested but SMTP is not configured');
+        return res.render('forgot-password', { error: null, message: genericMessage, email: '' });
+    }
+
+    try {
+        const resetToken = issuePasswordResetToken(user);
+        saveUser(user.username, user);
+        await sendPasswordResetEmail(user, getPasswordResetUrl(req, resetToken));
+        return res.render('forgot-password', { error: null, message: genericMessage, email: '' });
+    } catch (error) {
+        clearPasswordResetToken(user);
+        saveUser(user.username, user);
+        console.error('Password reset email error:', error.message || error);
+        return res.render('forgot-password', { error: null, message: genericMessage, email: '' });
+    }
+});
+
+app.get('/reset-password', (req, res) => {
+    res.set('Referrer-Policy', 'no-referrer');
+    const token = String(req.query.token || '').trim();
+    const user = findUserByResetToken(token);
+    res.render('reset-password', {
+        error: user ? null : 'Este link é inválido ou já expirou.',
+        message: null,
+        token: user ? token : ''
+    });
+});
+
+app.post('/reset-password', async (req, res) => {
+    const token = String(req.body.token || '').trim();
+    const password = String(req.body.password || '');
+    const confirmPassword = String(req.body.confirmPassword || '');
+    const user = findUserByResetToken(token);
+
+    if (!user) {
+        return res.render('reset-password', {
+            error: 'Este link é inválido ou já expirou.',
+            message: null,
+            token: ''
+        });
+    }
+    if (password.length < 6) {
+        return res.render('reset-password', {
+            error: 'A nova senha deve ter no mínimo 6 caracteres.',
+            message: null,
+            token
+        });
+    }
+    if (password !== confirmPassword) {
+        return res.render('reset-password', {
+            error: 'As senhas não conferem.',
+            message: null,
+            token
+        });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    clearPasswordResetToken(user);
+    saveUser(user.username, user);
+    return res.redirect('/login?reset=1');
 });
 
 app.get('/register', (req, res) => {
@@ -792,6 +977,7 @@ app.post('/api/profile', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Nova senha deve ter no mÃ­nimo 6 caracteres' });
         }
         user.password = await bcrypt.hash(newPassword, 10);
+        clearPasswordResetToken(user);
     }
 
     saveUser(user.username, user);
@@ -1243,7 +1429,7 @@ app.delete('/api/cdn-pool', requireAuth, (req, res) => {
     res.json({ urls: user.cdn_pool });
 });
 
-function normalizeConfigPayload(nextConfig) {
+function normalizeConfigPayload(nextConfig, currentConfig = null) {
     const parsedVersion = Number(nextConfig.Version);
     const parsedAppVersion = Number(nextConfig.AppVersion);
     nextConfig.Version = Number.isFinite(parsedVersion) ? parsedVersion : 1;
@@ -1283,13 +1469,77 @@ function normalizeConfigPayload(nextConfig) {
     return nextConfig;
 }
 
-// Save completo â€” versÃµes 100% manuais (sem auto +1)
+function stableSerialize(value) {
+    if (Array.isArray(value)) return `[${value.map(stableSerialize).join(',')}]`;
+    if (value && typeof value === 'object') {
+        return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key])}`).join(',')}}`;
+    }
+    return JSON.stringify(value);
+}
+
+function asVersionNumber(value, fallback = 1) {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 1 ? number : fallback;
+}
+
+function getConfigVersionPayload(config) {
+    return {
+        UdpPort: String(config?.UdpPort ?? '7300'),
+        Contato: String(config?.Contato ?? ''),
+        Site: String(config?.Site ?? ''),
+        Servers: Array.isArray(config?.Servers) ? config.Servers : []
+    };
+}
+
+function getSmsVersionPayload(config) {
+    const sms = (config?.Sms && typeof config.Sms === 'object') ? config.Sms : {};
+    return {
+        Update: String(sms.Update ?? ''),
+        Notes: String(sms.Notes ?? '')
+    };
+}
+
+function getThemeVersionPayload(config) {
+    const theme = (config?.Theme && typeof config.Theme === 'object') ? { ...config.Theme } : {};
+    delete theme.Version;
+    delete theme.Update;
+    return theme;
+}
+
+function applyAutomaticVersions(currentConfig, nextConfig) {
+    if (!currentConfig) return nextConfig;
+
+    const configChanged = stableSerialize(getConfigVersionPayload(currentConfig))
+        !== stableSerialize(getConfigVersionPayload(nextConfig));
+    const smsChanged = stableSerialize(getSmsVersionPayload(currentConfig))
+        !== stableSerialize(getSmsVersionPayload(nextConfig));
+    const themeChanged = stableSerialize(getThemeVersionPayload(currentConfig))
+        !== stableSerialize(getThemeVersionPayload(nextConfig));
+
+    nextConfig.Version = configChanged
+        ? asVersionNumber(currentConfig.Version) + 1
+        : asVersionNumber(currentConfig.Version);
+
+    const currentSmsVersion = asVersionNumber(currentConfig.Sms?.Version);
+    nextConfig.Sms.Version = String(smsChanged ? currentSmsVersion + 1 : currentSmsVersion);
+
+    const currentThemeVersion = asVersionNumber(currentConfig.Theme?.Version);
+    nextConfig.Theme.Version = String(themeChanged ? currentThemeVersion + 1 : currentThemeVersion);
+
+    return nextConfig;
+}
+
+// Save completo — versões de config, tema e SMS sobem automaticamente. O APK continua manual.
 app.post('/dashboard/save', requireAuth, requireActivePlanApi, (req, res) => {
     const { config_json } = req.body;
     try {
-        const nextConfig = normalizeConfigPayload(JSON.parse(config_json));
         const user = getUser(req.user.username);
-        if (!user) return res.status(500).send('Erro ao salvar as configuraÃ§Ãµes');
+        if (!user) return res.status(500).send('Erro ao salvar as configurações');
+        const currentConfig = parseUserConfig(user);
+        const nextConfig = applyAutomaticVersions(
+            currentConfig,
+            normalizeConfigPayload(JSON.parse(config_json))
+        );
         user.config_json = JSON.stringify(nextConfig, null, 2);
         saveUser(user.username, user);
         return res.json({
@@ -1307,34 +1557,41 @@ app.post('/dashboard/save', requireAuth, requireActivePlanApi, (req, res) => {
     }
 });
 
-// Salva sÃ³ SMS (nÃ£o mexe em Version da config nem no tema)
+// Rotas legadas de SMS e tema: também calculam a versão automaticamente.
 app.post('/api/sms', requireAuth, requireActivePlanApi, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     const config = parseUserConfig(user);
     const body = req.body || {};
-    config.Sms = {
-        Version: String(body.Version ?? config.Sms?.Version ?? '1'),
-        Update: String(body.Update ?? ''),
-        Notes: String(body.Notes ?? '')
+    const nextSms = {
+        Version: String(config.Sms?.Version ?? '1'),
+        Update: String(body.Update ?? config.Sms?.Update ?? ''),
+        Notes: String(body.Notes ?? config.Sms?.Notes ?? '')
     };
+    const smsChanged = stableSerialize(getSmsVersionPayload(config))
+        !== stableSerialize(getSmsVersionPayload({ ...config, Sms: nextSms }));
+    nextSms.Version = String(smsChanged ? asVersionNumber(config.Sms?.Version) + 1 : asVersionNumber(config.Sms?.Version));
+    config.Sms = nextSms;
     user.config_json = JSON.stringify(config, null, 2);
     saveUser(user.username, user);
     res.json({ ok: true, Sms: config.Sms });
 });
 
-// Salva sÃ³ Theme (nÃ£o mexe em Version da config nem no SMS)
 app.post('/api/theme', requireAuth, requireActivePlanApi, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     const config = parseUserConfig(user);
     const body = (req.body && typeof req.body === 'object') ? req.body : {};
-    config.Theme = {
+    const nextTheme = {
         ...((config.Theme && typeof config.Theme === 'object') ? config.Theme : {}),
         ...body,
-        Version: String(body.Version ?? config.Theme?.Version ?? '1'),
+        Version: String(config.Theme?.Version ?? '1'),
         AppName: 'ConnectPlus'
     };
+    const themeChanged = stableSerialize(getThemeVersionPayload(config))
+        !== stableSerialize(getThemeVersionPayload({ ...config, Theme: nextTheme }));
+    nextTheme.Version = String(themeChanged ? asVersionNumber(config.Theme?.Version) + 1 : asVersionNumber(config.Theme?.Version));
+    config.Theme = nextTheme;
     user.config_json = JSON.stringify(config, null, 2);
     saveUser(user.username, user);
     res.json({ ok: true, Theme: config.Theme });
@@ -1364,7 +1621,8 @@ app.post('/api/config/import', requireAuth, requireActivePlanApi, (req, res) => 
         if (!incoming || typeof incoming !== 'object') {
             return res.status(400).json({ error: 'JSON invÃ¡lido' });
         }
-        const nextConfig = normalizeConfigPayload(incoming);
+        const currentConfig = parseUserConfig(user);
+        const nextConfig = applyAutomaticVersions(currentConfig, normalizeConfigPayload(incoming));
         user.config_json = JSON.stringify(nextConfig, null, 2);
         saveUser(user.username, user);
         res.json({ ok: true, config: nextConfig });
