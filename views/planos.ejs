@@ -40,10 +40,45 @@
         .ok { color:#34d399; font-weight:600; }
         .warn { color:#fbbf24; }
         .pay-status { margin-top: .75rem; font-weight: 700; }
+        .plans-body {
+            display: block;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .plans-wrap {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .plans-loading .plans-wrap {
+            visibility: hidden;
+        }
+        .plans-ready .plans-wrap {
+            visibility: visible;
+        }
+        .topbar > div { min-width: 0; }
+        .topbar > div:last-child { justify-content: flex-end; }
+        .plans-grid { align-items: stretch; }
+        .plan-card { min-width: 0; display: flex; flex-direction: column; }
+        .plan-card p { overflow-wrap: anywhere; }
+        .plan-card .btn { margin-top: auto; }
+        .admin-orders-box { overflow: hidden; }
+        @media (max-width: 640px) {
+            .plans-wrap { padding: 1rem 0.85rem 2.5rem; }
+            .topbar { align-items: stretch; }
+            .topbar > div:last-child { width: 100%; justify-content: stretch; }
+            .topbar > div:last-child .btn { flex: 1 1 0; min-width: 0; }
+            .plans-grid { grid-template-columns: 1fr; gap: .85rem; }
+            .plan-card { padding: 1.05rem; }
+            .plan-price { font-size: 1.65rem; }
+            .status-box { padding: .9rem; overflow-wrap: anywhere; }
+        }
     </style>
 </head>
-<body class="dashboard-body" style="display:block;">
-    <div class="plans-wrap">
+<body class="dashboard-body plans-body plans-loading">
+    <div class="plans-wrap" id="plansPage">
         <div class="topbar">
             <div>
                 <div class="eyebrow">CONNECTPLUS</div>
@@ -97,7 +132,7 @@
         </div>
 
         <% if (user.isAdmin) { %>
-        <div class="status-box" style="margin-top:1.5rem;">
+        <div class="status-box admin-orders-box" style="margin-top:1.5rem;">
             <h3 style="margin:0 0 .75rem;">Admin · pedidos pendentes</h3>
             <button class="btn secondary" type="button" onclick="loadPending()">Atualizar lista</button>
             <div id="pendingList" style="margin-top:1rem;"></div>
@@ -114,6 +149,10 @@
     </div>
 
     <script>
+        // Evita que a página apareça parcialmente montada durante o recarregamento.
+        document.body.classList.remove('plans-loading');
+        document.body.classList.add('plans-ready');
+
         let currentOrderId = null;
         let pollTimer = null;
 
