@@ -210,6 +210,8 @@ app.set('trust proxy', true);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
+// Serve o Vue localmente para que o dashboard não dependa do unpkg atrás de proxy/Worker.
+app.use('/vendor', express.static(path.join(__dirname, 'node_modules', 'vue', 'dist')));
 
 // Pasta pÃºblica para APKs por usuÃ¡rio
 const APK_DIR = path.join(__dirname, 'public', 'apks');
@@ -251,7 +253,12 @@ const UPDATE_RESOURCES = {
 };
 
 function requestBaseUrl(req) {
-    return `${req.protocol}://${req.get('host')}`;
+    if (APP_BASE_URL) return APP_BASE_URL;
+    const forwardedProto = String(req.get('x-forwarded-proto') || '').split(',')[0].trim();
+    const forwardedHost = String(req.get('x-forwarded-host') || '').split(',')[0].trim();
+    const protocol = forwardedProto || req.protocol;
+    const host = forwardedHost || req.get('host');
+    return `${protocol}://${host}`;
 }
 
 function parseUserConfig(user) {
