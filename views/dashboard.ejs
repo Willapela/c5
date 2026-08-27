@@ -199,7 +199,7 @@
                             <small class="text-muted">Gerada automaticamente para o seu usuário e entregue no formato ConnectPlus.</small>
                         </div>
                     </div>
-                    <p class="text-muted" style="margin-top: 1rem;">As alterações serão gravadas pelo botão <strong>Salvar alterações</strong> na barra lateral.</p>
+                    <p class="text-muted" style="margin-top: 1rem;">As alterações serão gravadas pelo botão <strong>Salvar Configurações</strong> na barra inferior.</p>
                 </div>
 
                 <div class="glass-container config-card" style="margin-top: 1.25rem;">
@@ -280,7 +280,7 @@
                         <button class="btn secondary" @click="saveCdnPool">💾 Salvar pool CDN</button>
                         <button class="btn primary" @click="testCdnPool" :disabled="cdnTesting">{{ cdnTesting ? 'Testando...' : '⚡ Testar links' }}</button>
                     </div>
-                    <p class="text-muted" style="margin-top: 1rem;">O pool CDN possui salvamento próprio. Configuração geral, servidores, SMS e tema são gravados pelo botão <strong>Salvar alterações</strong> na barra lateral.</p>
+                    <p class="text-muted" style="margin-top: 1rem;">O pool CDN possui salvamento próprio. Configuração geral, servidores e tema são gravados pelo botão <strong>Salvar Configurações</strong> na barra inferior. O SMS possui botão próprio.</p>
                 </div>
                 <div v-if="cdnResults.length" class="glass-container config-card">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
@@ -322,7 +322,7 @@
                     <p class="text-muted">Estrutura compatível com o tema enviado para o ConnectPlus.</p>
                     <div class="card-grid">
                         <div class="form-group"><label>Nome do aplicativo</label><input type="text" v-model="config.Theme.AppName" readonly value="ConnectPlus" style="background-color: rgba(255,255,255,0.05); color: #888; cursor: not-allowed;"></div>
-                        <div class="form-group"><label>Versão do tema (automática)</label><input type="text" :value="config.Theme.Version" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;"><small class="text-muted">Sobe automaticamente quando o tema mudar.</small></div>
+                        <div class="form-group"><label>Versão do tema</label><input type="number" min="1" step="1" v-model.number="config.Theme.Version"><small class="text-muted">Editável. Se o conteúdo do tema mudar sem alterar este número, ele também sobe automaticamente.</small></div>
                         <div class="form-group"><label>Imagem de fundo</label><input type="url" v-model="config.Theme.ImgFundo"></div>
                         <div class="form-group"><label>Logo</label><input type="url" v-model="config.Theme.ImgLogo"></div>
                         <div class="form-group"><label>Banner</label><input type="url" v-model="config.Theme.ImgBanner"></div>
@@ -338,7 +338,7 @@
                         <div class="form-group"><label>ColorDialogs</label><input type="text" v-model="config.Theme.ColorDialogs"></div>
                         <div class="form-group"><label>ColorButtons</label><input type="text" v-model="config.Theme.ColorButtons"></div>
                     </div>
-                    <p class="text-muted" style="margin-top: 1rem;">O tema será salvo junto com as demais alterações pelo botão <strong>Salvar alterações</strong>.</p>
+                    <p class="text-muted" style="margin-top: 1rem;">O tema será salvo pelo botão <strong>Salvar Configurações</strong> na barra inferior.</p>
                 </div>
             </div>
 
@@ -411,7 +411,13 @@
                             <small class="text-muted">Texto que aparece no aplicativo.</small>
                         </div>
                     </div>
-                    <p class="text-muted" style="margin-top: 1rem;">A mensagem será salva junto com as demais alterações pelo botão <strong>Salvar alterações</strong>.</p>
+                    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-top:1rem;">
+                        <button type="button" class="btn primary" :disabled="smsSaving" @click="saveSmsOnly">
+                            {{ smsSaving ? 'Salvando SMS...' : 'Salvar SMS' }}
+                        </button>
+                        <span v-if="saveStatus" class="save-status-inline">{{ saveStatus }}</span>
+                    </div>
+                    <p class="text-muted" style="margin-top: .75rem;">O SMS possui salvamento próprio. A versão sobe automaticamente quando a mensagem mudar.</p>
                 </div>
             </div>
 
@@ -662,7 +668,7 @@
         </main>
 
         <!-- Barra global de configuração, separada do perfil e do pool CDN. -->
-        <div class="floating-save-bar" v-if="activeMenu !== 'profile'">
+        <div class="floating-save-bar" v-if="!['profile', 'sms'].includes(activeMenu)">
             <div class="floating-save-inner">
                 <span v-if="saveStatus" class="save-status">{{ saveStatus }}</span>
                 <button type="button" class="btn primary" :disabled="isSaving" @click="saveAllChanges">
@@ -1169,7 +1175,7 @@
                     this.saveStatus = '';
                     try {
                         await this.persistConfig();
-                        this.saveStatus = `✅ Configuração, servidores, SMS e tema salvos! Configuração v${this.config.Version}`;
+                        this.saveStatus = `✅ Configuração, servidores e tema salvos! Configuração v${this.config.Version}`;
                         setTimeout(() => { this.saveStatus = ''; }, 4500);
                     } catch (e) {
                         alert(e.message || 'Erro ao salvar as alterações.');
