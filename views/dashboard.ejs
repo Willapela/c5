@@ -662,7 +662,7 @@
         </main>
 
         <!-- Barra global de configuração, separada do perfil e do pool CDN. -->
-        <div class="floating-save-bar">
+        <div class="floating-save-bar" v-if="activeMenu !== 'profile'">
             <div class="floating-save-inner">
                 <span v-if="saveStatus" class="save-status">{{ saveStatus }}</span>
                 <button type="button" class="btn primary" :disabled="isSaving" @click="saveAllChanges">
@@ -1138,6 +1138,9 @@
                         throw new Error((data && data.error) || 'Erro ao salvar as configurações no servidor.');
                     }
                     if (data.Version !== undefined) this.config.Version = Number(data.Version);
+                    if (data.UdpPort !== undefined) this.config.UdpPort = String(data.UdpPort);
+                    if (data.Contato !== undefined) this.config.Contato = String(data.Contato);
+                    if (data.Site !== undefined) this.config.Site = String(data.Site);
                     if (data.AppVersion !== undefined) this.config.AppVersion = Number(data.AppVersion);
                     if (data.VersionName !== undefined) this.config.VersionName = String(data.VersionName);
                     if (data.Actualization !== undefined) this.config.Actualization = String(data.Actualization);
