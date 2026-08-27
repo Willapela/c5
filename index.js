@@ -1580,6 +1580,9 @@ app.post('/dashboard/save', requireAuth, requireActivePlanApi, (req, res) => {
         return res.json({
             ok: true,
             Version: nextConfig.Version,
+            UdpPort: nextConfig.UdpPort,
+            Contato: nextConfig.Contato,
+            Site: nextConfig.Site,
             AppVersion: nextConfig.AppVersion,
             VersionName: nextConfig.VersionName,
             Actualization: nextConfig.Actualization,
