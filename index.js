@@ -1559,7 +1559,13 @@ function applyAutomaticVersions(currentConfig, nextConfig) {
     nextConfig.Sms.Version = String(smsChanged ? currentSmsVersion + 1 : currentSmsVersion);
 
     const currentThemeVersion = asVersionNumber(currentConfig.Theme?.Version);
-    nextConfig.Theme.Version = String(themeChanged ? currentThemeVersion + 1 : currentThemeVersion);
+    const requestedThemeVersion = asVersionNumber(nextConfig.Theme?.Version, currentThemeVersion);
+    const themeVersionManuallyChanged = requestedThemeVersion !== currentThemeVersion;
+    nextConfig.Theme.Version = String(
+        themeVersionManuallyChanged
+            ? requestedThemeVersion
+            : (themeChanged ? currentThemeVersion + 1 : currentThemeVersion)
+    );
 
     return nextConfig;
 }
@@ -1571,10 +1577,10 @@ app.post('/dashboard/save', requireAuth, requireActivePlanApi, (req, res) => {
         const user = getUser(req.user.username);
         if (!user) return res.status(500).send('Erro ao salvar as configurações');
         const currentConfig = parseUserConfig(user);
-        const nextConfig = applyAutomaticVersions(
-            currentConfig,
-            normalizeConfigPayload(JSON.parse(config_json))
-        );
+        const incomingConfig = normalizeConfigPayload(JSON.parse(config_json));
+        // SMS possui salvamento próprio; o botão global não pode sobrescrever esse bloco.
+        incomingConfig.Sms = currentConfig.Sms;
+        const nextConfig = applyAutomaticVersions(currentConfig, incomingConfig);
         user.config_json = JSON.stringify(nextConfig, null, 2);
         saveUser(user.username, user);
         return res.json({
@@ -1623,12 +1629,19 @@ app.post('/api/theme', requireAuth, requireActivePlanApi, (req, res) => {
     const nextTheme = {
         ...((config.Theme && typeof config.Theme === 'object') ? config.Theme : {}),
         ...body,
-        Version: String(config.Theme?.Version ?? '1'),
+        Version: String(body.Version ?? config.Theme?.Version ?? '1'),
         AppName: 'ConnectPlus'
     };
     const themeChanged = stableSerialize(getThemeVersionPayload(config))
         !== stableSerialize(getThemeVersionPayload({ ...config, Theme: nextTheme }));
-    nextTheme.Version = String(themeChanged ? asVersionNumber(config.Theme?.Version) + 1 : asVersionNumber(config.Theme?.Version));
+    const currentThemeVersion = asVersionNumber(config.Theme?.Version);
+    const requestedThemeVersion = asVersionNumber(nextTheme.Version, currentThemeVersion);
+    const themeVersionManuallyChanged = requestedThemeVersion !== currentThemeVersion;
+    nextTheme.Version = String(
+        themeVersionManuallyChanged
+            ? requestedThemeVersion
+            : (themeChanged ? currentThemeVersion + 1 : currentThemeVersion)
+    );
     config.Theme = nextTheme;
     user.config_json = JSON.stringify(config, null, 2);
     saveUser(user.username, user);
