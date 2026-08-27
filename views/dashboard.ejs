@@ -93,13 +93,6 @@
                     <span class="nav-icon" aria-hidden="true">🛠️</span><span>Admin</span>
                 </div>
             </nav>
-            <div style="padding: 0.75rem 1rem 0;">
-                <button type="button" class="btn primary full-width" :disabled="isSaving" @click="saveAllChanges">
-                    {{ isSaving ? 'Salvando...' : 'Salvar alterações' }}
-                </button>
-                <small v-if="saveStatus" style="display:block; margin-top:.5rem; color:#34d399; text-align:center;">{{ saveStatus }}</small>
-            </div>
-            
             <div class="sidebar-footer">
                 <div class="user-profile" style="cursor:pointer;" @click="setMenu('profile')">
                     <div class="avatar"><%= user.username.charAt(0).toUpperCase() %></div>
@@ -668,7 +661,17 @@
 
         </main>
 
-        <!-- Toast de status (sem botão flutuante global) -->
+        <!-- Barra global de configuração, separada do perfil e do pool CDN. -->
+        <div class="floating-save-bar">
+            <div class="floating-save-inner">
+                <span v-if="saveStatus" class="save-status">{{ saveStatus }}</span>
+                <button type="button" class="btn primary" :disabled="isSaving" @click="saveAllChanges">
+                    {{ isSaving ? 'Salvando...' : 'Salvar Configurações' }}
+                </button>
+            </div>
+        </div>
+
+        <!-- Toast de status -->
         <div v-if="saveStatus" class="save-toast">{{ saveStatus }}</div>
     </div>
 
