@@ -1796,39 +1796,48 @@ app.post('/api/config/import', requireAuth, requireActivePlanApi, (req, res) => 
     }
 });
 
+function sendDynamicJson(res, payload) {
+    res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    });
+    return res.type('application/json').send(payload);
+}
+
 // Resolvedor unificado: o aplicativo precisa conhecer apenas o UUID.
 app.get('/u/:uuid', (req, res) => {
     const user = findUserByUpdateUuid(req.params.uuid);
     if (!user) return res.status(404).json({ error: 'UUID de atualização não encontrado' });
     const uuid = ensureUserUpdateUuid(user);
-    res.type('application/json').send(buildUpdateManifest(req, uuid, user));
+    sendDynamicJson(res, buildUpdateManifest(req, uuid, user));
 });
 
 app.get('/u/:uuid/config', (req, res) => {
     const user = findUserByUpdateUuid(req.params.uuid);
     if (!user) return res.status(404).send('Not Found');
     const uuid = ensureUserUpdateUuid(user);
-    res.type('application/json').send(buildUserConfig(req, uuid, user, '/u'));
+    sendDynamicJson(res, buildUserConfig(req, uuid, user, '/u'));
 });
 
 app.get('/u/:uuid/appupdate', (req, res) => {
     const user = findUserByUpdateUuid(req.params.uuid);
     if (!user) return res.status(404).send('Not Found');
     const uuid = ensureUserUpdateUuid(user);
-    res.type('application/json').send(buildAppUpdate(req, uuid, user, '/u'));
+    sendDynamicJson(res, buildAppUpdate(req, uuid, user, '/u'));
 });
 
 app.get('/u/:uuid/sms', (req, res) => {
     const user = findUserByUpdateUuid(req.params.uuid);
     if (!user) return res.status(404).send('Not Found');
-    res.type('application/json').send(buildSmsPayload(user));
+    sendDynamicJson(res, buildSmsPayload(user));
 });
 
 app.get('/u/:uuid/theme', (req, res) => {
     const user = findUserByUpdateUuid(req.params.uuid);
     if (!user) return res.status(404).send('Not Found');
     const uuid = ensureUserUpdateUuid(user);
-    res.type('application/json').send(buildThemePayload(req, uuid, user, '/u'));
+    sendDynamicJson(res, buildThemePayload(req, uuid, user, '/u'));
 });
 
 // Endpoints pÃºblicos no formato esperado pelo aplicativo (legado).
@@ -1836,28 +1845,28 @@ app.get('/:username/config', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
     if (!user) return res.status(404).send('Not Found');
-    res.type('application/json').send(buildUserConfig(req, username, user));
+    sendDynamicJson(res, buildUserConfig(req, username, user));
 });
 
 app.get('/:username/appupdate', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
     if (!user) return res.status(404).send('Not Found');
-    res.type('application/json').send(buildAppUpdate(req, username, user));
+    sendDynamicJson(res, buildAppUpdate(req, username, user));
 });
 
 app.get('/:username/sms', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
     if (!user) return res.status(404).send('Not Found');
-    res.type('application/json').send(buildSmsPayload(user));
+    sendDynamicJson(res, buildSmsPayload(user));
 });
 
 app.get('/:username/theme', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
     if (!user) return res.status(404).send('Not Found');
-    res.type('application/json').send(buildThemePayload(req, username, user));
+    sendDynamicJson(res, buildThemePayload(req, username, user));
 });
 console.log('Mercado Pago:', (typeof getMpAccessToken === 'function' && getMpAccessToken()) ? 'CONFIGURADO' : 'NÃO configurado (modo PIX manual)');
 
