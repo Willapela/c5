@@ -668,7 +668,7 @@
         </main>
 
         <!-- Barra global de configuração, separada do perfil e do pool CDN. -->
-        <div class="floating-save-bar" v-if="!['profile', 'sms'].includes(activeMenu)">
+        <div class="floating-save-bar" v-if="!['profile', 'sms', 'cdn'].includes(activeMenu)">
             <div class="floating-save-inner">
                 <span v-if="saveStatus" class="save-status">{{ saveStatus }}</span>
                 <button type="button" class="btn primary" :disabled="isSaving" @click="saveAllChanges">
