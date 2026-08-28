@@ -1607,14 +1607,21 @@ app.post('/api/sms', requireAuth, requireActivePlanApi, (req, res) => {
     if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     const config = parseUserConfig(user);
     const body = req.body || {};
+    const currentSmsVersion = asVersionNumber(config.Sms?.Version);
+    const requestedSmsVersion = asVersionNumber(body.Version, currentSmsVersion);
     const nextSms = {
-        Version: String(config.Sms?.Version ?? '1'),
+        Version: String(requestedSmsVersion),
         Update: String(body.Update ?? config.Sms?.Update ?? ''),
         Notes: String(body.Notes ?? config.Sms?.Notes ?? '')
     };
     const smsChanged = stableSerialize(getSmsVersionPayload(config))
         !== stableSerialize(getSmsVersionPayload({ ...config, Sms: nextSms }));
-    nextSms.Version = String(smsChanged ? asVersionNumber(config.Sms?.Version) + 1 : asVersionNumber(config.Sms?.Version));
+    const smsVersionManuallyChanged = requestedSmsVersion !== currentSmsVersion;
+    nextSms.Version = String(
+        smsVersionManuallyChanged
+            ? requestedSmsVersion
+            : (smsChanged ? currentSmsVersion + 1 : currentSmsVersion)
+    );
     config.Sms = nextSms;
     user.config_json = JSON.stringify(config, null, 2);
     saveUser(user.username, user);
