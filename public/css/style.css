@@ -2109,3 +2109,136 @@ body.dashboard-body .save-toast {
     body.dashboard-body .nav-item,
     body.dashboard-body .btn { transition: none; }
 }
+
+
+/* Visão Geral — resumo de status e navegação vetorial */
+.overview-status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1.1rem;
+}
+
+.status-summary-card {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    padding: 1rem 1.05rem;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 1rem;
+    background: linear-gradient(145deg, rgba(18, 32, 55, .86), rgba(8, 16, 30, .94));
+    box-shadow: 0 16px 36px rgba(1, 7, 20, .22);
+    transition: transform 180ms var(--ease-out), border-color 180ms ease, box-shadow 180ms ease;
+}
+.status-summary-card::after {
+    content: '';
+    position: absolute;
+    right: -1.5rem;
+    bottom: -2.2rem;
+    width: 5.5rem;
+    height: 5.5rem;
+    border-radius: 50%;
+    background: var(--summary-glow, rgba(110, 168, 254, .13));
+    filter: blur(2px);
+}
+.status-summary-card:hover {
+    border-color: rgba(110, 168, 254, .3);
+    box-shadow: 0 20px 44px rgba(1, 7, 20, .32);
+    transform: translateY(-3px);
+}
+.status-summary-config { --summary-glow: rgba(96, 165, 250, .2); }
+.status-summary-theme { --summary-glow: rgba(52, 211, 153, .16); }
+.status-summary-sms { --summary-glow: rgba(167, 139, 250, .17); }
+.status-summary-apk { --summary-glow: rgba(251, 191, 36, .14); }
+.status-summary-top { display: flex; align-items: center; justify-content: space-between; gap: .65rem; }
+.status-summary-label { color: #8298bc; font-size: .62rem; font-weight: 800; letter-spacing: .13em; }
+.status-summary-dot { width: .45rem; height: .45rem; flex: 0 0 auto; border-radius: 50%; background: #6ea8fe; box-shadow: 0 0 0 .22rem rgba(110, 168, 254, .1), 0 0 12px rgba(110, 168, 254, .55); }
+.status-summary-theme .status-summary-dot { background: #34d399; box-shadow: 0 0 0 .22rem rgba(52, 211, 153, .1), 0 0 12px rgba(52, 211, 153, .55); }
+.status-summary-sms .status-summary-dot { background: #a78bfa; box-shadow: 0 0 0 .22rem rgba(167, 139, 250, .1), 0 0 12px rgba(167, 139, 250, .55); }
+.status-summary-apk .status-summary-dot { background: #fbbf24; box-shadow: 0 0 0 .22rem rgba(251, 191, 36, .1), 0 0 12px rgba(251, 191, 36, .55); }
+.status-summary-value { position: relative; z-index: 1; display: block; margin-top: .55rem; color: #f8fafc; font-size: clamp(1.45rem, 2.5vw, 2rem); font-weight: 800; letter-spacing: -.055em; }
+.status-summary-detail { position: relative; z-index: 1; display: block; overflow: hidden; margin-top: .3rem; color: #8493aa; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+
+.overview-sync-card {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    margin-top: 1rem;
+    padding: .85rem 1rem;
+    border: 1px solid rgba(52, 211, 153, .18);
+    border-radius: .95rem;
+    background: linear-gradient(90deg, rgba(6, 78, 59, .18), rgba(15, 23, 42, .35));
+}
+.overview-sync-card.pending {
+    border-color: rgba(251, 191, 36, .28);
+    background: linear-gradient(90deg, rgba(120, 53, 15, .18), rgba(15, 23, 42, .35));
+}
+.overview-sync-icon { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border: 1px solid rgba(52, 211, 153, .25); border-radius: .7rem; background: rgba(52, 211, 153, .11); color: #6ee7b7; }
+.overview-sync-card.pending .overview-sync-icon { border-color: rgba(251, 191, 36, .3); background: rgba(251, 191, 36, .1); color: #fbbf24; }
+.overview-sync-icon svg { width: 1.05rem; height: 1.05rem; }
+.overview-sync-copy { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.overview-sync-copy strong { color: #d1fae5; font-size: .82rem; }
+.overview-sync-card.pending .overview-sync-copy strong { color: #fde68a; }
+.overview-sync-copy span { overflow: hidden; color: #8493aa; font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.overview-sync-state { margin-left: auto; color: #6ee7b7; font-size: .7rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+.overview-sync-card.pending .overview-sync-state { color: #fbbf24; }
+
+body.dashboard-body .nav-icon svg { width: 1rem; height: 1rem; display: block; }
+body.dashboard-body .nav-icon { font-size: 0; }
+
+@media (max-width: 1100px) {
+    .overview-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+    .overview-status-grid { grid-template-columns: 1fr 1fr; gap: .7rem; }
+    .status-summary-card { padding: .85rem; }
+    .status-summary-label { font-size: .56rem; letter-spacing: .08em; }
+    .status-summary-value { font-size: 1.45rem; }
+    .status-summary-detail { font-size: .66rem; }
+    .overview-sync-card { align-items: flex-start; }
+    .overview-sync-state { display: none; }
+}
+@media (max-width: 390px) {
+    .overview-status-grid { grid-template-columns: 1fr; }
+}
+
+
+/* Estado de sincronização da barra de salvamento */
+.floating-save-bar .save-status {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    min-height: 30px;
+    padding: .35rem .65rem;
+    border: 1px solid rgba(52, 211, 153, .18);
+    border-radius: 999px;
+    background: rgba(52, 211, 153, .08);
+    color: #6ee7b7;
+    font-size: .72rem;
+    font-weight: 800;
+}
+.floating-save-bar .save-status::before {
+    content: '';
+    width: .42rem;
+    height: .42rem;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 .2rem rgba(52, 211, 153, .1);
+}
+.floating-save-bar .save-status-pending {
+    border-color: rgba(251, 191, 36, .25);
+    background: rgba(120, 53, 15, .18);
+    color: #fbbf24;
+}
+.floating-save-bar .save-status-pending::before { box-shadow: 0 0 0 .2rem rgba(251, 191, 36, .1); }
+.floating-save-bar .save-status-ok { color: #6ee7b7; }
+body.dashboard-body .floating-save-bar .btn.primary:disabled {
+    cursor: default;
+    opacity: .62;
+    background: linear-gradient(135deg, #334d73, #263959);
+    box-shadow: none;
+    transform: none;
+}
+@media (max-width: 640px) {
+    .floating-save-bar .save-status { display: none; }
+}
