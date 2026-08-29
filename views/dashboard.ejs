@@ -43,6 +43,17 @@
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 0.5rem;
         }
+        .account-countdown {
+            margin-top: .35rem;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .01em;
+            color: #93c5fd;
+        }
+        .account-countdown.warning { color: #fbbf24; }
+        .account-countdown.danger { color: #fb7185; }
+        .text-warning { color: #fbbf24 !important; }
+        .text-danger { color: #fb7185 !important; }
     </style>
 </head>
 <body class="dashboard-body">
@@ -99,6 +110,9 @@
                     <div>
                         <div style="font-weight: 600; color: #fff;"><%= user.username %></div>
                         <div style="font-size: 0.8rem; color: var(--text-muted);"><%= user.email || 'Sem e-mail' %></div>
+                        <div class="account-countdown" :class="profileCountdownClass">
+                            <span>{{ profileCountdownLabel }}</span>
+                        </div>
                         <div style="font-size: 0.68rem; color: #9fc5ff; margin-top: .25rem; word-break: break-all;" title="UUID de atualização">UUID: <%= user.updateUuid %></div>
                     </div>
                 </div>
@@ -458,9 +472,11 @@
                         <div class="form-group">
                             <label>Válido até</label>
                             <input type="text" :value="profileExpiresLabel" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
-                            <small class="text-muted" v-if="profile.active === false" style="color:#fb7185;">Plano expirado — <a href="/planos">renovar</a></small>
-                            <small class="text-muted" v-else-if="profile.isAdmin">Conta admin (sem vencimento)</small>
-                            <small class="text-muted" v-else><a href="/planos">Ver planos / renovar</a></small>
+                            <small class="text-muted" :class="profileCountdownClass === 'danger' ? 'text-danger' : (profileCountdownClass === 'warning' ? 'text-warning' : '')">
+                                {{ profileCountdownLabel }}
+                                <span v-if="profileCountdownClass === 'danger'"> — <a href="/planos">renovar</a></span>
+                                <span v-else-if="!profile.isAdmin"> — <a href="/planos">Ver planos / renovar</a></span>
+                            </small>
                         </div>
                         <div class="form-group">
                             <label>Senha atual</label>
@@ -759,6 +775,8 @@
                     apkFileName: '',
                     apkUploading: false,
                     apkUploadMsg: '',
+                    nowTick: Date.now(),
+                    expiryTimer: null,
                     smsSaving: false,
                     themeSaving: false,
                     importMsg: '',
@@ -799,6 +817,12 @@
             mounted() {
                 this.loadCdnPool();
                 this.refreshProfile();
+                this.expiryTimer = window.setInterval(() => {
+                    this.nowTick = Date.now();
+                }, 60000);
+            },
+            beforeUnmount() {
+                if (this.expiryTimer) window.clearInterval(this.expiryTimer);
             },
             computed: {
                 cdnOnlineCount() {
@@ -817,6 +841,25 @@
                     const d = new Date(raw);
                     if (Number.isNaN(d.getTime())) return String(raw);
                     return d.toLocaleString('pt-BR');
+                },
+                profileCountdownLabel() {
+                    if (this.profile && this.profile.isAdmin) return 'Sem vencimento';
+                    const raw = this.profile && this.profile.expiresAt;
+                    if (!raw) return 'Validade sem limite';
+                    const expires = new Date(raw).getTime();
+                    if (!Number.isFinite(expires)) return 'Validade indisponível';
+                    const remaining = expires - this.nowTick;
+                    if (remaining <= 0 || this.profile.active === false) return 'Conta expirada';
+                    const days = Math.ceil(remaining / 86400000);
+                    return `${days} ${days === 1 ? 'dia' : 'dias'} restantes`;
+                },
+                profileCountdownClass() {
+                    if (this.profile && this.profile.isAdmin) return '';
+                    const raw = this.profile && this.profile.expiresAt;
+                    const expires = raw ? new Date(raw).getTime() : NaN;
+                    if (!Number.isFinite(expires) || expires - this.nowTick <= 0 || this.profile.active === false) return 'danger';
+                    const days = Math.ceil((expires - this.nowTick) / 86400000);
+                    return days <= 3 ? 'warning' : '';
                 }
             },
             methods: {
