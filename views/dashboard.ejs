@@ -54,6 +54,14 @@
         .account-countdown.danger { color: #fb7185; }
         .text-warning { color: #fbbf24 !important; }
         .text-danger { color: #fb7185 !important; }
+        .account-dates-card { margin-top: 1.25rem; }
+        .account-dates-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
+        .account-date-item { padding: .9rem 1rem; border: 1px solid rgba(148,163,184,.14); border-radius: .75rem; background: rgba(15,23,42,.36); }
+        .account-date-label { display: block; margin-bottom: .35rem; color: #94a3b8; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+        .account-date-value { display: block; color: #f8fafc; font-size: 1rem; font-weight: 700; }
+        @media (max-width: 640px) {
+            .account-dates-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body class="dashboard-body">
@@ -177,6 +185,24 @@
                     <div class="config-card">
                         <h4 style="color: #fff; margin-bottom: 0.5rem;">Versão da Config</h4>
                         <div style="font-size: 2.5rem; font-weight: 700; color: #10b981;">v{{ config.Version }}</div>
+                    </div>
+                </div>
+
+                <div class="glass-container config-card account-dates-card">
+                    <h3 style="margin: 0 0 .45rem; color: #fff;">Validade da conta</h3>
+                    <p class="text-muted" style="margin-bottom: 1rem;">Acompanhe quando a conta foi criada e quando o acesso termina.</p>
+                    <div class="account-dates-grid">
+                        <div class="account-date-item">
+                            <span class="account-date-label">Conta criada</span>
+                            <strong class="account-date-value">{{ profileCreatedLabel }}</strong>
+                        </div>
+                        <div class="account-date-item">
+                            <span class="account-date-label">Expira em</span>
+                            <strong class="account-date-value">{{ profileExpiresLabel }}</strong>
+                        </div>
+                    </div>
+                    <div class="account-countdown" :class="profileCountdownClass" style="margin-top: .9rem;">
+                        {{ profileCountdownLabel }}
                     </div>
                 </div>
             </div>
@@ -785,6 +811,7 @@
                         email: '<%= user.email || "" %>',
                         updateUuid: '<%= user.updateUuid || "" %>',
                         updateUrl: '<%= updateUrl %>',
+                        createdAt: '<%= user.created_at || "" %>',
                         plan: '<%= user.plan || "trial" %>',
                         expiresAt: '<%= user.expiresAt || "" %>',
                         active: <%= (user.active !== false) ? 'true' : 'false' %>,
@@ -833,6 +860,13 @@
                 },
                 isActualizationOn() {
                     return this.config.Actualization === 'true' || this.config.Actualization === true;
+                },
+                profileCreatedLabel() {
+                    const raw = this.profile && this.profile.createdAt;
+                    if (!raw) return 'Data não registrada';
+                    const d = new Date(raw);
+                    if (Number.isNaN(d.getTime())) return String(raw);
+                    return d.toLocaleString('pt-BR');
                 },
                 profileExpiresLabel() {
                     if (this.profile && this.profile.isAdmin) return 'Sem vencimento (admin)';
@@ -947,6 +981,7 @@
                         this.profile.email = data.email || '';
                         this.profile.updateUuid = data.updateUuid || this.profile.updateUuid;
                         this.profile.updateUrl = data.updateUrl || this.profile.updateUrl;
+                        this.profile.createdAt = data.created_at || this.profile.createdAt || '';
                         this.profile.plan = data.plan || this.profile.plan;
                         this.profile.expiresAt = data.expiresAt || '';
                         this.profile.active = data.active !== false;
