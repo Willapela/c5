@@ -114,6 +114,1517 @@
             <div class="menu-label">Painel de controle</div>
             <nav class="nav-menu">
                 <div class="nav-item" :class="{active: activeMenu === 'dashboard'}" @click="setMenu('dashboard')">
+                    <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5M4 19h16M8 16v-5M12 16V7M16 16v-8M20 16v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Visão Geral</span>
+                </div>
+                <div class="nav-item" :class="{active: activeMenu === 'general'}" @click="setMenu('general')">
+                    <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z" stroke="currentColor" stroke-width="1.8"/><path d="m19.3 13.5 1.1.8-1.7 2.9-1.3-.5a7.8 7.8 0 0 1-1.8 1l-.2 1.4h-3.4l-.2-1.4a7.8 7.8 0 0 1-1.8-1l-1.3.5-1.7-2.9 1.1-.8a7.2 7.2 0 0 1 0-2.1l-1.1-.8 1.7-2.9 1.3.5a7.8 7.8 0 0 1 1.8-1l.2-1.4h3.4l.2 1.4a7.8 7.8 0 0 1 1.8 1l1.3-.5 1.7 2.9-1.1.8a7.2 7.2 0 0 1 0 2.1Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></span><span>Configurações Gerais</span>
+                </div>
+                <div class="nav-item" :class="{active: activeMenu === 'layout'}" @click="setMenu('layout')">
+                    <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4.2a7.8 7.8 0 1 0 0 15.6h1.2a1.9 1.9 0 0 0 0-3.8h-.8a1.8 1.8 0 0 1 0-3.6h2.8a5.6 5.6 0 0 0 5.6-5.6A7.8 7.8 0 0 0 12 4.2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="7.8" cy="10" r=".8" fill="currentColor"/><circle cx="10.3" cy="7.2" r=".8" fill="currentColor"/><circle cx="14" cy="7" r=".8" fill="currentColor"/></svg></span><span>Layout e Cores</span>
+                </div>
+                <div class="nav-item" :class="{active: activeMenu === 'servers'}" @click="setMenu('servers')">
+                    <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="11" rx="1.8" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4M8 9h.01M11 9h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span>Servidores</span>
+                </div>
+                <div class="nav-item" :class="{active: activeMenu === 'cdn'}" @click="setMenu('cdn')">
+                    <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/><path d="M3.8 12h16.4M12 3.5c2.2 2.3 3.3 5.1 3.3 8.5s-1.1 6.2-3.3 8.5c-2.2-2.3-3.3-5.1-3.3-8.5S9.8 5.8 12 3.5Z" stroke="currentColor" stroke-width="1.4"/></svg></span><span>Pool CDN</span>
+                </div>
+                <div class="nav-item" :class="{active: activeMenu === 'sms'}" @click="setMenu('sms')">
+                    <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 6.5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7.5 11.5h9M7.5 14.5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span>SMS / Aviso</span>
+                </div>
+                <div class="nav-item" :class="{active: activeMenu === 'profile'}" @click="setMenu('profile')">
+                    <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M5.5 19.2a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><span>Meu Perfil</span>
+                </div>
+                <a class="nav-item" href="/planos" style="text-decoration:none;">
+                    <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 9.5h17M7 14h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><span>Planos</span>
+                </a>
+                <div class="nav-item" v-if="profile.isAdmin" :class="{active: activeMenu === 'admin'}" @click="setMenu('admin'); loadPaymentSettings();">
+                    <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m14.5 5.5 4 4M13 7l-6.8 6.8a2.1 2.1 0 0 0 0 3l1 1a2.1 2.1 0 0 0 3 0L17 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="m5 19 2-2M15.5 4a3 3 0 0 1 4.5 3.7l-2.2 2.2M4 20l1.2-3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Admin</span>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-profile" style="cursor:pointer;" @click="setMenu('profile')">
+                    <div class="avatar"><%= user.username.charAt(0).toUpperCase() %></div>
+                    <div>
+                        <div style="font-weight: 600; color: #fff;"><%= user.username %></div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);"><%= user.email || 'Sem e-mail' %></div>
+                        <div class="account-countdown" :class="profileCountdownClass">
+                            <span>{{ profileCountdownLabel }}</span>
+                        </div>
+                        <div style="font-size: 0.68rem; color: #9fc5ff; margin-top: .25rem; word-break: break-all;" title="UUID de atualização">UUID: <%= user.updateUuid %></div>
+                    </div>
+                </div>
+                <a href="/logout" class="btn danger full-width small" style="margin-top: 0.5rem;">Sair</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            
+            <!-- Dashboard Section -->
+            <div v-show="activeMenu === 'dashboard'">
+                <div class="page-header">
+                    <div class="eyebrow">CENTRAL DE CONTROLE</div><h1 class="page-title">Visão Geral</h1>
+                    <p class="text-muted">Gerencie suas configurações remotas.</p>
+                </div>
+                
+                <div class="glass-container config-card" style="margin-bottom: 2rem;">
+                    <h3 style="margin-bottom: 1rem; color: #fff;">Identificador único de atualização</h3>
+                    <p class="text-muted" style="margin-bottom: 1rem;">Agora o aplicativo pode usar somente este UUID. O painel resolve automaticamente os links de configuração, appupdate, tema e SMS.</p>
+                    <div class="url-box" style="margin-bottom: .75rem;">
+                        <input type="text" readonly value="<%= user.updateUuid %>" id="updateUuid">
+                        <button onclick="copySpecificUrl('updateUuid')" class="btn secondary">Copiar UUID</button>
+                    </div>
+                    <p class="text-muted" style="margin: .5rem 0 0;">Endpoint unificado para o app consultar o mapa de atualizações:</p>
+                    <div class="url-box" style="margin-bottom: .75rem;">
+                        <input type="text" readonly value="<%= updateUrl %>" id="updateUrl">
+                        <button onclick="copySpecificUrl('updateUrl')" class="btn secondary">Copiar URL</button>
+                    </div>
+                    <details style="margin-top: 1rem;">
+                        <summary style="cursor:pointer; color:#9fc5ff;">Ver links individuais (compatibilidade)</summary>
+                        <div style="padding-top:.75rem;">
+                            <p class="text-muted" style="margin: .5rem 0 0;">Configuração:</p>
+                            <div class="url-box" style="margin-bottom: .75rem;">
+                                <input type="text" readonly value="<%= updateConfigUrl %>" id="configUrl">
+                                <button onclick="copySpecificUrl('configUrl')" class="btn secondary">Copiar</button>
+                            </div>
+                            <p class="text-muted" style="margin: .5rem 0 0;">Appupdate / APK:</p>
+                            <div class="url-box" style="margin-bottom: .75rem;">
+                                <input type="text" readonly value="<%= updateAppUpdateUrl %>" id="appUpdateUrl">
+                                <button onclick="copySpecificUrl('appUpdateUrl')" class="btn secondary">Copiar</button>
+                            </div>
+                            <p class="text-muted" style="margin: .5rem 0 0;">Tema:</p>
+                            <div class="url-box" style="margin-bottom: .75rem;">
+                                <input type="text" readonly value="<%= updateThemeUrl %>" id="themeUrl">
+                                <button onclick="copySpecificUrl('themeUrl')" class="btn secondary">Copiar</button>
+                            </div>
+                            <p class="text-muted" style="margin: .5rem 0 0;">SMS:</p>
+                            <div class="url-box" style="margin-bottom: 0;">
+                                <input type="text" readonly value="<%= updateSmsUrl %>" id="smsUrl">
+                                <button onclick="copySpecificUrl('smsUrl')" class="btn secondary">Copiar</button>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="overview-status-grid">
+                    <div class="status-summary-card status-summary-config">
+                        <div class="status-summary-top"><span class="status-summary-label">CONFIGURAÇÃO</span><span class="status-summary-dot"></span></div>
+                        <strong class="status-summary-value">v{{ config.Version }}</strong>
+                        <span class="status-summary-detail">{{ config.Servers.length }} servidor{{ config.Servers.length === 1 ? '' : 'es' }} publicado{{ config.Servers.length === 1 ? '' : 's' }}</span>
+                    </div>
+                    <div class="status-summary-card status-summary-theme">
+                        <div class="status-summary-top"><span class="status-summary-label">TEMA</span><span class="status-summary-dot"></span></div>
+                        <strong class="status-summary-value">v{{ config.Theme.Version }}</strong>
+                        <span class="status-summary-detail">Layout e cores sincronizados</span>
+                    </div>
+                    <div class="status-summary-card status-summary-sms">
+                        <div class="status-summary-top"><span class="status-summary-label">SMS / AVISO</span><span class="status-summary-dot"></span></div>
+                        <strong class="status-summary-value">v{{ config.Sms.Version }}</strong>
+                        <span class="status-summary-detail">Mensagem independente</span>
+                    </div>
+                    <div class="status-summary-card status-summary-apk">
+                        <div class="status-summary-top"><span class="status-summary-label">APLICATIVO</span><span class="status-summary-dot"></span></div>
+                        <strong class="status-summary-value">{{ config.VersionName || '—' }}</strong>
+                        <span class="status-summary-detail">Código {{ config.AppVersion || '—' }} · {{ isActualizationOn ? 'Atualização ativa' : 'Atualização desativada' }}</span>
+                    </div>
+                </div>
+
+                <div class="overview-sync-card" :class="{pending: hasPendingChanges}">
+                    <div class="overview-sync-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M20 7v5h-5M4 17v-5h5M5.3 9A7 7 0 0 1 17.7 6.2L20 8M4 16l2.3 1.8A7 7 0 0 0 18.7 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="overview-sync-copy">
+                        <strong>{{ hasPendingChanges ? 'Alterações pendentes' : 'Tudo sincronizado' }}</strong>
+                        <span>{{ hasPendingChanges ? 'Salve para publicar as mudanças deste painel.' : 'As configurações publicadas estão em dia.' }}</span>
+                    </div>
+                    <span class="overview-sync-state">{{ hasPendingChanges ? 'Aguardando salvamento' : 'Sincronizado' }}</span>
+                </div>
+
+                <div class="glass-container config-card account-dates-card">
+                    <div class="account-dates-head">
+                        <div>
+                            <div class="eyebrow">STATUS DA CONTA</div>
+                            <h3 class="account-dates-heading">Validade da conta</h3>
+                            <p class="text-muted account-dates-description">Acompanhe o período de acesso da sua conta.</p>
+                        </div>
+                        <div class="account-status-pill" :class="profileCountdownClass">{{ profileCountdownLabel }}</div>
+                    </div>
+                    <div class="account-dates-grid">
+                        <div class="account-date-item">
+                            <span class="account-date-label">Conta criada</span>
+                            <strong class="account-date-value">{{ profileCreatedLabel }}</strong>
+                        </div>
+                        <div class="account-date-item">
+                            <span class="account-date-label">Expira em</span>
+                            <strong class="account-date-value">{{ profileExpiresLabel }}</strong>
+                        </div>
+                    </div>
+                    <div class="account-dates-footer">
+                        <span>Plano: <strong>{{ profile.plan || '—' }}</strong></span>
+                        <span v-if="profileCountdownClass === 'danger'"><a href="/planos">Renovar acesso</a></span>
+                        <span v-else-if="!profile.isAdmin"><a href="/planos">Ver planos</a></span>
+                        <span v-else>Conta administrativa</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- General Section -->
+            <div v-show="activeMenu === 'general'">
+                <div class="page-header">
+                    <div class="eyebrow">CONFIGURAÇÃO GLOBAL</div><h1 class="page-title">Configurações Gerais</h1>
+                    <p class="text-muted">Configurações globais do aplicativo.</p>
+                </div>
+                
+                <div class="glass-container config-card">
+                    <div class="card-grid form-grid-2">
+                        <div class="form-group">
+                            <label>Versão da configuração (automática)</label>
+                            <input type="text" :value="config.Version" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                            <small class="text-muted">A versão sobe automaticamente quando configurações gerais ou servidores mudarem.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Porta UDP</label>
+                            <input type="text" v-model="config.UdpPort" placeholder="7300">
+                        </div>
+                        <div class="form-group">
+                            <label>Contato</label>
+                            <input type="url" v-model="config.Contato" placeholder="https://t.me/seu_canal">
+                        </div>
+                        <div class="form-group">
+                            <label>Site</label>
+                            <input type="url" v-model="config.Site" placeholder="https://www.speedtest.net">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>URL da configuração</label>
+                            <input type="text" value="<%= appUrl %>" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                            <small class="text-muted">Gerada automaticamente para o seu usuário e entregue no formato ConnectPlus.</small>
+                        </div>
+                    </div>
+                    <p class="text-muted" style="margin-top: 1rem;">As alterações serão gravadas pelo botão <strong>Salvar Configurações</strong> na barra inferior.</p>
+                </div>
+
+                <div class="glass-container config-card" style="margin-top: 1.25rem;">
+                    <h3 class="section-title" style="margin-top:0;">Atualização do aplicativo (APK)</h3>
+                    <p class="text-muted" style="margin-bottom: 1rem;">
+                        Quando houver uma nova versão do app, suba o APK aqui. O link entra em
+                        <code>UpdateApk</code> do endpoint de appupdate do seu usuário.
+                    </p>
+                    <div class="card-grid form-grid-2">
+                        <div class="form-group">
+                            <label>Atualização do app</label>
+                            <div class="actualization-toggle">
+                                <button type="button"
+                                    class="btn"
+                                    :class="isActualizationOn ? 'primary' : 'secondary'"
+                                    @click="setActualization(true)">
+                                    Ativada
+                                </button>
+                                <button type="button"
+                                    class="btn"
+                                    :class="!isActualizationOn ? 'danger' : 'secondary'"
+                                    @click="setActualization(false)">
+                                    Desativada
+                                </button>
+                            </div>
+                            <small class="text-muted">Campo <code>Actualization</code>: {{ config.Actualization }}</small>
+                        </div>
+                        <div class="form-group">
+                            <label>AppVersion (código)</label>
+                            <input type="number" v-model.number="config.AppVersion" min="0">
+                            <small class="text-muted">Número interno da versão do APK.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>VersionName</label>
+                            <input type="text" v-model="config.VersionName" placeholder="1.0.0">
+                            <small class="text-muted">Nome visível da versão (ex: 2026.1.0).</small>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>URL do APK (UpdateApk)</label>
+                            <input type="url" v-model="config.UpdateApk" placeholder="https://seu-dominio/apks/usuario/app.apk">
+                            <small class="text-muted">Preenchido automático após o upload, ou cole um link externo.</small>
+                        </div>
+                    </div>
+
+                    <div class="apk-upload-box">
+                        <input type="file" accept=".apk,application/vnd.android.package-archive" ref="apkFile" id="apkFileInput" @change="onApkSelected">
+                        <div class="apk-upload-actions">
+                            <label for="apkFileInput" class="btn secondary">Escolher APK</label>
+                            <button class="btn primary" :disabled="apkUploading || !apkFileName" @click="uploadApk">
+                                {{ apkUploading ? 'Enviando...' : '⬆ Enviar APK' }}
+                            </button>
+                            <button v-if="config.UpdateApk" class="btn danger" :disabled="apkUploading" @click="removeApk">Remover</button>
+                        </div>
+                        <p class="text-muted" style="margin-top:0.75rem;margin-bottom:0;">
+                            <span v-if="apkFileName">Arquivo: <strong>{{ apkFileName }}</strong></span>
+                            <span v-else-if="config.UpdateApk">APK atual: <a :href="config.UpdateApk" target="_blank" rel="noopener">{{ config.UpdateApk }}</a></span>
+                            <span v-else>Nenhum APK selecionado.</span>
+                        </p>
+                        <p v-if="apkUploadMsg" class="text-muted" style="margin-top:0.4rem;color:#34d399 !important;">{{ apkUploadMsg }}</p>
+                    </div>
+                    <p class="text-muted" style="margin-top: 1rem;">Os dados do APK continuam sendo atualizados manualmente e serão gravados pelo botão <strong>Salvar alterações</strong>.</p>
+                </div>
+            </div>
+
+            <!-- CDN Pool Section -->
+            <div v-show="activeMenu === 'cdn'">
+                <div class="page-header">
+                    <div class="eyebrow">TESTE DE DISPONIBILIDADE</div><h1 class="page-title">Pool CDN</h1>
+                    <p class="text-muted">Teste domínios e URLs da CDN antes de usar no ProxyIP ou XHTTP.</p>
+                </div>
+                <div class="glass-container config-card">
+                    <div class="form-group">
+                        <label>Links ou domínios</label>
+                        <textarea v-model="cdnInput" rows="5" placeholder="oc3xhkzwdcw.map.azionedge.net&#10;https://exemplo.com/cdn&#10;outro.dominio.com"></textarea>
+                        <small class="text-muted">Um por linha, ou separados por vírgula ou #. Máximo 100 links.</small>
+                    </div>
+                    <div class="card-grid form-grid-2">
+                        <button class="btn secondary" @click="saveCdnPool">💾 Salvar pool CDN</button>
+                        <button class="btn primary" @click="testCdnPool" :disabled="cdnTesting">{{ cdnTesting ? 'Testando...' : '⚡ Testar links' }}</button>
+                    </div>
+                    <p class="text-muted" style="margin-top: 1rem;">O pool CDN possui salvamento próprio. Configuração geral, servidores e tema são gravados pelo botão <strong>Salvar Configurações</strong> na barra inferior. O SMS possui botão próprio.</p>
+                </div>
+                <div v-if="cdnResults.length" class="glass-container config-card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+                        <div>
+                            <h3 class="section-title" style="margin-top:0;">Resultado dos testes</h3>
+                            <p class="text-muted">{{ cdnOnlineCount }} ONLINE · {{ cdnOfflineCount }} OFFLINE · total {{ cdnResults.length }}</p>
+                            <p v-if="cdnTestedAt" class="text-muted" style="font-size:0.75rem;">Último teste: {{ formatTestedAt(cdnTestedAt) }}</p>
+                        </div>
+                        <button class="btn secondary small" @click="copyActiveCdn">📋 Copiar ativos</button>
+                    </div>
+                    <div class="cdn-results-list">
+                        <div class="list-item cdn-result-item" v-for="item in cdnResults" :key="item.url">
+                            <div class="list-item-content">
+                                <div class="list-item-title">{{ displayCdnHost(item) }}</div>
+                                <div class="list-item-subtitle">
+                                    {{ item.error || item.host || 'Sem resposta' }}
+                                    · {{ item.latency }} ms
+                                    · HTTP {{ item.status || '—' }}
+                                </div>
+                            </div>
+                            <span class="cdn-status" :class="item.online ? 'is-online' : 'is-offline'">
+                                {{ item.online ? 'ONLINE' : 'OFFLINE' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div v-else-if="cdnPool.length" class="glass-container config-card"><p class="text-muted">{{ cdnPool.length }} link(s) salvo(s). Clique em “Testar links” para verificar.</p></div>
+            </div>
+
+            <!-- Layout Section -->
+            <div v-show="activeMenu === 'layout'">
+                <div class="page-header">
+                    <div class="eyebrow">IDENTIDADE VISUAL</div><h1 class="page-title">Layout e Cores</h1>
+                    <p class="text-muted">Personalize links, imagens e cores do aplicativo.</p>
+                </div>
+                
+                <div class="glass-container config-card">
+                    <h3 class="section-title" style="margin-top:0;">Tema do aplicativo ConnectPlus</h3>
+                    <p class="text-muted">Estrutura compatível com o tema enviado para o ConnectPlus.</p>
+                    <div class="card-grid">
+                        <div class="form-group"><label>Nome do aplicativo</label><input type="text" v-model="config.Theme.AppName" readonly value="ConnectPlus" style="background-color: rgba(255,255,255,0.05); color: #888; cursor: not-allowed;"></div>
+                        <div class="form-group"><label>Versão do tema</label><input type="number" min="1" step="1" v-model.number="config.Theme.Version"><small class="text-muted">Editável. Se o conteúdo do tema mudar sem alterar este número, ele também sobe automaticamente.</small></div>
+                        <div class="form-group"><label>Imagem de fundo</label><input type="url" v-model="config.Theme.ImgFundo"></div>
+                        <div class="form-group"><label>Logo</label><input type="url" v-model="config.Theme.ImgLogo"></div>
+                        <div class="form-group"><label>Banner</label><input type="url" v-model="config.Theme.ImgBanner"></div>
+                        <div class="form-group"><label>Imagem do menu</label><input type="url" v-model="config.Theme.ImgMenu"></div>
+                        <div class="form-group"><label>Imagem dos logs</label><input type="url" v-model="config.Theme.ImgLogs"></div>
+                        <div class="form-group"><label>Imagem de check</label><input type="url" v-model="config.Theme.ImgCheck"></div>
+                        <div class="form-group"><label>Imagem do usuário</label><input type="url" v-model="config.Theme.ImgUser"></div>
+                        <div class="form-group"><label>Imagem da senha</label><input type="url" v-model="config.Theme.ImgPass"></div>
+                        <div class="form-group"><label>Imagem de atualização</label><input type="url" v-model="config.Theme.ImgUpdate"></div>
+                        <div class="form-group"><label>ColorOne</label><input type="text" v-model="config.Theme.ColorOne"></div>
+                        <div class="form-group"><label>ColorTwo</label><input type="text" v-model="config.Theme.ColorTwo"></div>
+                        <div class="form-group"><label>ColorStarter</label><input type="text" v-model="config.Theme.ColorStarter"></div>
+                        <div class="form-group"><label>ColorDialogs</label><input type="text" v-model="config.Theme.ColorDialogs"></div>
+                        <div class="form-group"><label>ColorButtons</label><input type="text" v-model="config.Theme.ColorButtons"></div>
+                    </div>
+                    <p class="text-muted" style="margin-top: 1rem;">O tema será salvo pelo botão <strong>Salvar Configurações</strong> na barra inferior.</p>
+                </div>
+            </div>
+
+                        <!-- Servers Section -->
+            <div v-show="activeMenu === 'servers'">
+                <div class="page-header servers-header">
+                    <div>
+                        <div class="eyebrow">CONNECTPLUS</div>
+                        <h1 class="page-title">Servidores</h1>
+                        <p class="text-muted">Gerencie seus servidores e IPs.</p>
+                    </div>
+                    <div class="servers-actions">
+                        <button type="button" class="btn primary servers-add-btn" @click="addServer">＋ Novo Servidor</button>
+                        <div class="servers-io-row">
+                            <button type="button" class="btn secondary" @click="exportConfig">⬇ Exportar</button>
+                            <label class="btn secondary servers-import-btn">
+                                ⬆ Importar
+                                <input type="file" accept="application/json,.json" @change="importConfig">
+                            </label>
+                        </div>
+                        <span v-if="importMsg" class="servers-import-msg">{{ importMsg }}</span>
+                    </div>
+                </div>
+
+                <div class="list-container">
+                    <div class="list-item" v-for="(srv, index) in config.Servers" :key="index" @click="editItem('Servers', index)">
+                        <div class="list-item-content">
+                            <div class="list-item-title">{{ srv.Name || 'Servidor Sem Nome' }}</div>
+                            <div class="list-item-subtitle">{{ srv.ServerIP }} : {{ srv.ServerPort }} &nbsp;|&nbsp; {{ srv.Info || srv.TYPE || 'Sem modo' }}</div>
+                        </div>
+                        <div class="list-item-actions">
+                            <button class="action-icon-btn danger" @click.stop="removeServer(index)" title="Excluir">✖</button>
+                        </div>
+                    </div>
+
+                    <div v-if="config.Servers.length === 0" class="text-muted" style="text-align: center; padding: 2rem;">
+                        Nenhum servidor encontrado. Clique em "Novo Servidor" para adicionar.
+                    </div>
+                </div>
+
+                <p class="text-muted" style="margin-top: 1rem;">Os servidores serão salvos junto com as demais alterações pelo botão <strong>Salvar alterações</strong> na barra lateral.</p>
+            </div>
+            <!-- SMS Section -->
+            <div v-show="activeMenu === 'sms'">
+                <div class="page-header">
+                    <div class="eyebrow">MENSAGENS DO APP</div>
+                    <h1 class="page-title">SMS / Aviso</h1>
+                    <p class="text-muted">Texto que o aplicativo busca no endpoint de SMS.</p>
+                </div>
+
+                <div class="glass-container config-card" style="margin-bottom: 1.25rem;">
+                    <h3 style="margin-bottom: 0.75rem; color: #fff;">URL do SMS</h3>
+                    <div class="url-box" style="margin-bottom: 0;">
+                        <input type="text" readonly value="<%= smsUrl %>" id="smsUrlPanel">
+                        <button onclick="copySpecificUrl('smsUrlPanel')" class="btn secondary">Copiar</button>
+                    </div>
+                    <small class="text-muted">Cole esta URL no app no campo de SMS/Update de aviso.</small>
+                </div>
+
+                <div class="glass-container config-card">
+                    <div class="card-grid form-grid-2">
+                        <div class="form-group">
+                            <label>Version (SMS)</label>
+                            <input type="number" min="1" step="1" v-model.number="config.Sms.Version">
+                            <small class="text-muted">Editável. Se a mensagem mudar sem trocar este número, ele sobe automaticamente.</small>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Notes (mensagem)</label>
+                            <textarea v-model="config.Sms.Notes" rows="5" placeholder="MENSAGEM DE TESTE"></textarea>
+                            <small class="text-muted">Texto que aparece no aplicativo.</small>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-top:1rem;">
+                        <button type="button" class="btn primary" :disabled="smsSaving" @click="saveSmsOnly">
+                            {{ smsSaving ? 'Salvando SMS...' : 'Salvar SMS' }}
+                        </button>
+                        <span v-if="saveStatus" class="save-status-inline">{{ saveStatus }}</span>
+                    </div>
+                    <p class="text-muted" style="margin-top: .75rem;">O SMS possui salvamento próprio. A versão sobe automaticamente quando a mensagem mudar.</p>
+                </div>
+            </div>
+
+            <!-- Profile Section -->
+            <div v-show="activeMenu === 'profile'">
+                <div class="page-header">
+                    <div class="eyebrow">CONTA</div>
+                    <h1 class="page-title">Meu Perfil</h1>
+                    <p class="text-muted">Gerencie e-mail e senha da sua conta.</p>
+                </div>
+
+                <div class="glass-container config-card">
+                    <div class="card-grid form-grid-2">
+                        <div class="form-group">
+                            <label>Usuário</label>
+                            <input type="text" :value="profile.username" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                            <small class="text-muted">O usuário não pode ser alterado (faz parte da URL da config).</small>
+                        </div>
+                        <div class="form-group">
+                            <label>E-mail</label>
+                            <input type="email" v-model="profile.email" placeholder="voce@email.com">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>UUID de atualização</label>
+                            <div class="url-box">
+                                <input type="text" :value="profile.updateUuid" id="profileUpdateUuid" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                                <button type="button" class="btn secondary" onclick="copySpecificUrl('profileUpdateUuid')">Copiar</button>
+                            </div>
+                            <small class="text-muted">Use este UUID no aplicativo para resolver todas as atualizações deste painel. Regenerar invalida o UUID anterior.</small>
+                            <div style="margin-top:.65rem;">
+                                <button type="button" class="btn danger small" :disabled="profileSaving" @click="regenerateUpdateUuid">Gerar novo UUID</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Plano</label>
+                            <input type="text" :value="profile.plan || '—'" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                        </div>
+                        <div class="form-group">
+                            <label>Válido até</label>
+                            <input type="text" :value="profileExpiresLabel" readonly style="background-color: rgba(255,255,255,0.05); color: #9fc5ff; cursor: not-allowed;">
+                            <small class="text-muted" :class="profileCountdownClass === 'danger' ? 'text-danger' : (profileCountdownClass === 'warning' ? 'text-warning' : '')">
+                                {{ profileCountdownLabel }}
+                                <span v-if="profileCountdownClass === 'danger'"> — <a href="/planos">renovar</a></span>
+                                <span v-else-if="!profile.isAdmin"> — <a href="/planos">Ver planos / renovar</a></span>
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label>Senha atual</label>
+                            <input type="password" v-model="profile.currentPassword" placeholder="••••••••" autocomplete="current-password">
+                            <small class="text-muted">Obrigatória só se for trocar a senha.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Nova senha</label>
+                            <input type="password" v-model="profile.newPassword" placeholder="••••••••" autocomplete="new-password">
+                            <small class="text-muted">Mínimo 6 caracteres. Deixe em branco para não alterar.</small>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                        <button class="btn primary" :disabled="profileSaving" @click="saveProfile">
+                            {{ profileSaving ? 'Salvando...' : 'Salvar perfil' }}
+                        </button>
+                        <span v-if="profileMsg" style="color:#34d399; font-weight:600;">{{ profileMsg }}</span>
+                        <span v-if="profileError" style="color:#fb7185; font-weight:600;">{{ profileError }}</span>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Admin Section -->
+            <div v-show="activeMenu === 'admin' && profile.isAdmin">
+                <div class="page-header">
+                    <div>
+                        <div class="eyebrow">ADMINISTRAÇÃO</div>
+                        <h1 class="page-title">Pagamentos</h1>
+                        <p class="text-muted">Token do Mercado Pago, chave PIX e preços dos planos.</p>
+                    </div>
+                </div>
+
+                <div class="config-card" style="max-width:720px;">
+                    <h3 class="section-title">Mercado Pago</h3>
+                    <p class="text-muted" style="margin-bottom:1rem;">
+                        Status:
+                        <strong :style="{color: paymentSettings.mpConfigured ? '#34d399' : '#fbbf24'}">
+                            {{ paymentSettings.mpConfigured ? 'CONFIGURADO' : 'NÃO configurado' }}
+                        </strong>
+                        <span v-if="paymentSettings.mpAccessTokenMasked"> · {{ paymentSettings.mpAccessTokenMasked }}</span>
+                    </p>
+                    <div class="form-group">
+                        <label>Access Token (APP_USR-...)</label>
+                        <input type="password" v-model="paymentSettings.mpAccessTokenInput" placeholder="Cole o token de produção do Mercado Pago" autocomplete="off">
+                        <small class="text-muted">Salvo em data/settings.json no servidor. Deixe em branco para não alterar.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Chave PIX manual (opcional, se não usar MP)</label>
+                        <input type="text" v-model="paymentSettings.pixKey" placeholder="email, CPF, telefone ou chave aleatória">
+                    </div>
+
+                    <h3 class="section-title" style="margin-top:1.5rem;">Preços dos planos (R$)</h3>
+                    <div class="card-grid form-grid-2">
+                        <div class="form-group">
+                            <label>Mensal</label>
+                            <input type="number" step="0.01" min="0" v-model.number="paymentSettings.planPrices.monthly">
+                        </div>
+                        <div class="form-group">
+                            <label>Trimestral</label>
+                            <input type="number" step="0.01" min="0" v-model.number="paymentSettings.planPrices.quarterly">
+                        </div>
+                        <div class="form-group">
+                            <label>Anual</label>
+                            <input type="number" step="0.01" min="0" v-model.number="paymentSettings.planPrices.yearly">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; flex-wrap:wrap; gap:.65rem; margin-top:1rem; align-items:center;">
+                        <button type="button" class="btn primary" :disabled="paymentSaving" @click="savePaymentSettings">
+                            {{ paymentSaving ? 'Salvando...' : 'Salvar configurações' }}
+                        </button>
+                        <button type="button" class="btn secondary" @click="clearMpToken" :disabled="paymentSaving">Remover token MP</button>
+                        <span v-if="paymentMsg" style="color:#34d399;font-weight:600;">{{ paymentMsg }}</span>
+                        <span v-if="paymentError" style="color:#fb7185;font-weight:600;">{{ paymentError }}</span>
+                    </div>
+                    <p class="text-muted" style="margin-top:1rem;">
+                        Depois de salvar o token, os pagamentos em <a href="/planos">/planos</a> geram QR Code PIX automático e liberam os dias sozinhos.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Modal for Editing Server/Network -->
+            <div class="modal-overlay" v-if="modal.isOpen" @click.self="closeModal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Configuração de Servidor</h3>
+                        <button class="modal-close" @click="closeModal">✖</button>
+                    </div>
+                    <div class="modal-body">
+                        
+                        <!-- Server Edit Fields -->
+                        <div v-if="modal.type === 'Servers' && config.Servers[modal.index]" class="server-form">
+                            <div class="form-group">
+                                <label>Modo de conexão</label>
+                                <select v-model="config.Servers[modal.index].Info" @change="onConnectionModeChange">
+                                    <option v-for="mode in connectionModes" :key="mode" :value="mode">{{ mode }}</option>
+                                </select>
+                                <div class="text-muted" style="margin-top: .5rem; line-height: 1.45;">
+                                    {{ modeDescriptions[config.Servers[modal.index].Info] }}
+                                </div>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>Nome</label>
+                                    <input type="text" v-model="config.Servers[modal.index].Name" placeholder="WILL">
+                                </div>
+                                <div>
+                                    <label>Descrição</label>
+                                    <input type="text" v-model="config.Servers[modal.index].Description" placeholder="T1M 01">
+                                </div>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>IP / Host do Servidor</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ServerIP">
+                                </div>
+                                <div>
+                                    <label>Porta do Servidor</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ServerPort" placeholder="443">
+                                </div>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>FLAG (URL)</label>
+                                    <input type="text" v-model="config.Servers[modal.index].FLAG" placeholder="https://.../bandeira.png">
+                                </div>
+                                <div>
+                                    <label>URL Check User</label>
+                                    <input type="text" v-model="config.Servers[modal.index].CheckUser" placeholder="http://.../check?user={user}">
+                                </div>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>Usuário</label>
+                                    <input type="text" v-model="config.Servers[modal.index].USER">
+                                </div>
+                                <div>
+                                    <label>Senha</label>
+                                    <input type="password" v-model="config.Servers[modal.index].PASS">
+                                </div>
+                            </div>
+                            <div v-if="['Direct','Proxy','Tlsws'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
+                                <div class="grid-col-full">
+                                    <label>Payload</label>
+                                    <textarea v-model="config.Servers[modal.index].Payload" placeholder="GET /app8 HTTP/1.1[lf]Host: dominio.com[lf]Upgrade: websocket[lf][lf]"></textarea>
+                                    <small class="text-muted">Use [lf] para quebra de linha. O app usa exatamente o texto informado.</small>
+                                </div>
+                            </div>
+                            <div v-if="['Proxy','Tlsws','XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group grid-col-2">
+                                <div>
+                                    <label>ProxyIP / Host</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ProxyIP" placeholder="IP ou host; use # para múltiplos">
+                                    <small class="field-help">Para rotação, separe vários proxies com <code>#</code>. No XHTTP, pode ser um domínio, como <code>oc3xhkzwdcw.map.azionedge.net</code>.</small>
+                                </div>
+                                <div>
+                                    <label>ProxyPort <span v-if="config.Servers[modal.index].Info === 'XHTTP'">(opcional)</span></label>
+                                    <input type="text" v-model="config.Servers[modal.index].ProxyPort" placeholder="443">
+                                </div>
+                            </div>
+                            <div v-if="['Ssl','Tlsws','XHTTP'].includes(config.Servers[modal.index].Info)" class="form-group">
+                                <label>SNI</label>
+                                <input type="text" v-model="config.Servers[modal.index].SNI" placeholder="app.tim.com.br">
+                                <small v-if="config.Servers[modal.index].Info === 'XHTTP'" class="field-help">No XHTTP, informe o domínio SNI usado pelo servidor.</small>
+                            </div>
+                            <div v-if="config.Servers[modal.index].Info === 'XHTTP'" class="form-group">
+<label>Path</label>
+                                <input type="text" v-model="config.Servers[modal.index].Path" placeholder="/ssh">
+                                    <small class="field-help">No XHTTP, use o caminho configurado pelo servidor, por exemplo <code>/ssh</code>.</small>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>ColorName</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ColorName" placeholder="#ffffff">
+                                </div>
+                                <div>
+                                    <label>ColorDescription</label>
+                                    <input type="text" v-model="config.Servers[modal.index].ColorDescription" placeholder="#ffffff">
+                                </div>
+                            </div>
+                            <div class="form-group grid-col-2">
+                                <div>
+                                    <label>Color</label>
+                                    <input type="text" v-model="config.Servers[modal.index].Color" placeholder="#0000ff">
+                                </div>
+                                <div>
+                                    <label>Versão TLS</label>
+                                    <select v-model="config.Servers[modal.index].TLSVersion">
+                                        <option value="TLSv1.3">TLSv1.3</option>
+                                        <option value="TLSv1.2">TLSv1.2</option>
+                                        <option value="TLSv1.1">TLSv1.1</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn primary" @click="closeModal">Concluir</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Barra global de configuração, separada do perfil e do pool CDN. -->
+        <div class="floating-save-bar" v-if="!['profile', 'sms', 'cdn'].includes(activeMenu)">
+            <div class="floating-save-inner">
+                <span v-if="saveStatus" class="save-status">{{ saveStatus }}</span>
+                <span v-else-if="hasPendingChanges" class="save-status save-status-pending">Alterações pendentes</span>
+                <span v-else class="save-status save-status-ok">Tudo salvo</span>
+                <button type="button" class="btn primary" :disabled="isSaving || !hasPendingChanges" @click="saveAllChanges" :title="hasPendingChanges ? 'Publicar as alterações' : 'Nenhuma alteração pendente'">
+                    {{ isSaving ? 'Salvando...' : (hasPendingChanges ? 'Salvar Configurações' : 'Tudo salvo') }}
+                </button>
+            </div>
+        </div>
+
+        <!-- Toast de status -->
+        <div v-if="saveStatus" class="save-toast">{{ saveStatus }}</div>
+    </div>
+
+    <script>
+        const initialConfig = <%- configStr %>;
+
+        const appUrl = "<%= appUrl %>";
+
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                if (!initialConfig.Networks) initialConfig.Networks = [];
+                if (!initialConfig.Servers) initialConfig.Servers = [];
+
+                // Modelo exclusivo do ConnectPlus: somente estas chaves são entregues ao app.
+                const serverDefaults = {
+                    Name: '', ColorName: '#ffffff', Description: '', ColorDescription: '#ffffff',
+                    FLAG: '', ServerIP: '', ServerPort: '443', CheckUser: '', USER: '', PASS: '',
+                    Payload: '', ProxyIP: '', ProxyPort: '443', SNI: '', Path: '', TLSVersion: 'TLSv1.2',
+                    Color: '#0000ff', Info: 'Tlsws'
+                };
+                const connectPlusKeys = Object.keys(serverDefaults);
+                initialConfig.Servers = initialConfig.Servers.map(server => {
+                    const normalized = {};
+                    connectPlusKeys.forEach(key => { normalized[key] = server[key] ?? serverDefaults[key]; });
+                    normalized.Info = ['Ssl', 'Direct', 'Proxy', 'Tlsws', 'XHTTP'].includes(server.Info)
+                        ? server.Info : (['Ssl', 'Direct', 'Proxy', 'Tlsws', 'XHTTP'].includes(server.TYPE) ? server.TYPE : 'Tlsws');
+                    return normalized;
+                });
+                
+                initialConfig.Update = appUrl;
+                initialConfig.UdpPort = String(initialConfig.UdpPort ?? '7300');
+                initialConfig.Contato = initialConfig.Contato ?? '';
+                initialConfig.Site = initialConfig.Site ?? '';
+                initialConfig.AppVersion = Number(initialConfig.AppVersion ?? initialConfig.Version ?? 1);
+                initialConfig.VersionName = String(initialConfig.VersionName ?? initialConfig.Version ?? '1');
+                initialConfig.UpdateApk = String(initialConfig.UpdateApk ?? '');
+                initialConfig.Actualization = (initialConfig.Actualization === true || initialConfig.Actualization === 'true' || initialConfig.Actualization === 1 || initialConfig.Actualization === '1')
+                    ? 'true'
+                    : 'false';
+                initialConfig.Sms = Object.assign(
+                    { Version: '1', Update: '', Notes: '' },
+                    (initialConfig.Sms && typeof initialConfig.Sms === 'object') ? initialConfig.Sms : {}
+                );
+                initialConfig.Sms.Version = String(initialConfig.Sms.Version ?? '1');
+                initialConfig.Sms.Update = String(initialConfig.Sms.Update ?? '');
+                initialConfig.Sms.Notes = String(initialConfig.Sms.Notes ?? '');
+                initialConfig.Theme = Object.assign({
+                    Version: '1', Update: '', AppName: 'ConnectPlus', ImgFundo: '', ImgLogo: '', ImgBanner: '',
+                    ImgMenu: '', ImgLogs: '', ImgCheck: '', ImgUser: '', ImgPass: '', ColorOne: '#7A333333',
+                    ColorTwo: '#7A333333', ColorStarter: '#7A333333', ColorDialogs: '#84ffffff',
+                    ColorButtons: '#333333', ImgUpdate: ''
+                }, initialConfig.Theme || {});
+                initialConfig.Theme.AppName = 'ConnectPlus';
+
+                // Delete the fake Layout object if it was accidentally created before
+                if (initialConfig.Layout) delete initialConfig.Layout;
+                
+                return {
+                    activeMenu: localStorage.getItem('activeMenu') || 'dashboard',
+                    connectionModes: [
+                        'Ssl', 'Direct', 'Proxy', 'Tlsws', 'XHTTP'
+                    ],
+                    modeDescriptions: {
+                        Ssl: 'SSL direto: o app usa ServerIP, ServerPort e SNI, sem proxy personalizado.',
+                        Direct: 'Direct: conexão direta; o app usa ServerIP, ServerPort e Payload.',
+                        Proxy: 'Proxy: o app usa ServerIP, ServerPort, ProxyIP, ProxyPort e Payload.',
+                        Tlsws: 'Tlsws: o app usa servidor, porta, proxy, payload e SNI.',
+                        XHTTP: 'XHTTP: o app usa servidor, porta, proxy, SNI e Path. O padrão de Path é /ssh.'
+                    },
+                    config: initialConfig,
+                    cdnPool: [],
+                    cdnInput: '',
+                    cdnResults: [],
+                    cdnActive: [],
+                    cdnTestedAt: null,
+                    cdnTesting: false,
+                    apkFileName: '',
+                    apkUploading: false,
+                    apkUploadMsg: '',
+                    nowTick: Date.now(),
+                    expiryTimer: null,
+                    savedGlobalSnapshot: JSON.stringify((() => { const snapshot = JSON.parse(JSON.stringify(initialConfig)); delete snapshot.Sms; return snapshot; })()),
+                    hasPendingChanges: false,
+                    smsSaving: false,
+                    themeSaving: false,
+                    importMsg: '',
+                    profile: {
+                        username: '<%= user.username %>',
+                        email: '<%= user.email || "" %>',
+                        updateUuid: '<%= user.updateUuid || "" %>',
+                        updateUrl: '<%= updateUrl %>',
+                        createdAt: '<%= user.created_at || "" %>',
+                        plan: '<%= user.plan || "trial" %>',
+                        expiresAt: '<%= user.expiresAt || "" %>',
+                        active: <%= (user.active !== false) ? 'true' : 'false' %>,
+                        isAdmin: <%= user.isAdmin ? 'true' : 'false' %>,
+                        currentPassword: '',
+                        newPassword: ''
+                    },
+                    profileSaving: false,
+                    profileMsg: '',
+                    profileError: '',
+                    paymentSettings: {
+                        mpConfigured: false,
+                        mpAccessTokenMasked: '',
+                        mpAccessTokenInput: '',
+                        pixKey: '',
+                        planPrices: { monthly: 29.9, quarterly: 79.9, yearly: 249.9 }
+                    },
+                    paymentSaving: false,
+                    paymentMsg: '',
+                    paymentError: '',
+                    modal: {
+                        isOpen: false,
+                        type: '',
+                        index: -1
+                    },
+                    isSaving: false,
+                    saveStatus: ''
+                }
+            },
+            mounted() {
+                this.loadCdnPool();
+                this.refreshProfile();
+                this.expiryTimer = window.setInterval(() => {
+                    this.nowTick = Date.now();
+                }, 60000);
+            },
+            beforeUnmount() {
+                if (this.expiryTimer) window.clearInterval(this.expiryTimer);
+            },
+            computed: {
+                cdnOnlineCount() {
+                    return (this.cdnResults || []).filter(item => item && item.online).length;
+                },
+                cdnOfflineCount() {
+                    return (this.cdnResults || []).filter(item => item && !item.online).length;
+                },
+                isActualizationOn() {
+                    return this.config.Actualization === 'true' || this.config.Actualization === true;
+                },
+                profileCreatedLabel() {
+                    const raw = this.profile && this.profile.createdAt;
+                    if (!raw) return 'Data não registrada';
+                    const d = new Date(raw);
+                    if (Number.isNaN(d.getTime())) return String(raw);
+                    return d.toLocaleString('pt-BR');
+                },
+                profileExpiresLabel() {
+                    if (this.profile && this.profile.isAdmin) return 'Sem vencimento (admin)';
+                    const raw = this.profile && this.profile.expiresAt;
+                    if (!raw) return 'Sem limite definido';
+                    const d = new Date(raw);
+                    if (Number.isNaN(d.getTime())) return String(raw);
+                    return d.toLocaleString('pt-BR');
+                },
+                profileCountdownLabel() {
+                    if (this.profile && this.profile.isAdmin) return 'Sem vencimento';
+                    const raw = this.profile && this.profile.expiresAt;
+                    if (!raw) return 'Validade sem limite';
+                    const expires = new Date(raw).getTime();
+                    if (!Number.isFinite(expires)) return 'Validade indisponível';
+                    const remaining = expires - this.nowTick;
+                    if (remaining <= 0 || this.profile.active === false) return 'Conta expirada';
+                    const days = Math.ceil(remaining / 86400000);
+                    return `${days} ${days === 1 ? 'dia' : 'dias'} restantes`;
+                },
+                profileCountdownClass() {
+                    if (this.profile && this.profile.isAdmin) return '';
+                    const raw = this.profile && this.profile.expiresAt;
+                    if (!raw) return 'warning';
+                    const expires = new Date(raw).getTime();
+                    if (!Number.isFinite(expires) || expires - this.nowTick <= 0 || this.profile.active === false) return 'danger';
+                    const days = Math.ceil((expires - this.nowTick) / 86400000);
+                    return days <= 3 ? 'warning' : '';
+                }
+            },
+            watch: {
+                config: {
+                    deep: true,
+                    handler() {
+                        this.hasPendingChanges = this.serializeGlobalConfig() !== this.savedGlobalSnapshot;
+                    }
+                }
+            },
+            methods: {
+                serializeGlobalConfig() {
+                    const snapshot = JSON.parse(JSON.stringify(this.config || {}));
+                    delete snapshot.Sms;
+                    return JSON.stringify(snapshot);
+                },
+                markGlobalSaved() {
+                    this.savedGlobalSnapshot = this.serializeGlobalConfig();
+                    this.hasPendingChanges = false;
+                },
+                async setActualization(on) {
+                    this.config.Actualization = on ? 'true' : 'false';
+                    // Salva imediatamente para não voltar false ao recarregar
+                    await this.saveConfig();
+                },
+                async loadPaymentSettings() {
+                    if (!this.profile.isAdmin) return;
+                    try {
+                        const res = await fetch('/api/admin/payment-settings', { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Falha ao carregar');
+                        this.paymentSettings.mpConfigured = !!data.mpConfigured;
+                        this.paymentSettings.mpAccessTokenMasked = data.mpAccessTokenMasked || '';
+                        this.paymentSettings.pixKey = data.pixKey || '';
+                        if (data.planPrices) {
+                            this.paymentSettings.planPrices = {
+                                monthly: Number(data.planPrices.monthly),
+                                quarterly: Number(data.planPrices.quarterly),
+                                yearly: Number(data.planPrices.yearly)
+                            };
+                        }
+                    } catch (e) {
+                        this.paymentError = e.message || 'Erro';
+                    }
+                },
+                async savePaymentSettings() {
+                    this.paymentSaving = true;
+                    this.paymentMsg = '';
+                    this.paymentError = '';
+                    try {
+                        const body = {
+                            pixKey: this.paymentSettings.pixKey,
+                            planPrices: this.paymentSettings.planPrices
+                        };
+                        if (this.paymentSettings.mpAccessTokenInput) {
+                            body.mpAccessToken = this.paymentSettings.mpAccessTokenInput;
+                        }
+                        const res = await fetch('/api/admin/payment-settings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify(body)
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Falha ao salvar');
+                        this.paymentSettings.mpConfigured = !!data.mpConfigured;
+                        this.paymentSettings.mpAccessTokenMasked = data.mpAccessTokenMasked || '';
+                        this.paymentSettings.mpAccessTokenInput = '';
+                        this.paymentMsg = '✅ Configurações salvas';
+                        setTimeout(() => { this.paymentMsg = ''; }, 3000);
+                    } catch (e) {
+                        this.paymentError = e.message || 'Erro ao salvar';
+                    } finally {
+                        this.paymentSaving = false;
+                    }
+                },
+                async clearMpToken() {
+                    if (!confirm('Remover o token do Mercado Pago salvo no painel?')) return;
+                    this.paymentSaving = true;
+                    try {
+                        const res = await fetch('/api/admin/payment-settings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify({ clearMpToken: true })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Falha');
+                        this.paymentSettings.mpConfigured = !!data.mpConfigured;
+                        this.paymentSettings.mpAccessTokenMasked = '';
+                        this.paymentMsg = 'Token removido';
+                    } catch (e) {
+                        this.paymentError = e.message || 'Erro';
+                    } finally {
+                        this.paymentSaving = false;
+                    }
+                },
+                async refreshProfile() {
+                    try {
+                        const response = await fetch('/api/profile');
+                        const data = await response.json();
+                        if (!response.ok) return;
+                        this.profile.username = data.username || this.profile.username;
+                        this.profile.email = data.email || '';
+                        this.profile.updateUuid = data.updateUuid || this.profile.updateUuid;
+                        this.profile.updateUrl = data.updateUrl || this.profile.updateUrl;
+                        this.profile.createdAt = data.created_at || this.profile.createdAt || '';
+                        this.profile.plan = data.plan || this.profile.plan;
+                        this.profile.expiresAt = data.expiresAt || '';
+                        this.profile.active = data.active !== false;
+                        this.profile.isAdmin = !!data.isAdmin;
+                    } catch (e) { /* ignore */ }
+                },
+                async regenerateUpdateUuid() {
+                    if (!confirm('Gerar um novo UUID? O UUID anterior deixará de funcionar imediatamente.')) return;
+                    this.profileSaving = true;
+                    this.profileMsg = '';
+                    this.profileError = '';
+                    try {
+                        const response = await fetch('/api/profile/update-uuid/regenerate', {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(data.error || 'Falha ao gerar novo UUID');
+                        this.profile.updateUuid = data.updateUuid || '';
+                        this.profile.updateUrl = data.updateUrl || '';
+                        this.profileMsg = '✅ Novo UUID gerado!';
+                        setTimeout(() => { this.profileMsg = ''; }, 3500);
+                    } catch (err) {
+                        this.profileError = err.message || 'Erro ao gerar novo UUID';
+                    } finally {
+                        this.profileSaving = false;
+                    }
+                },
+                async saveProfile() {
+                    this.profileSaving = true;
+                    this.profileMsg = '';
+                    this.profileError = '';
+                    try {
+                        const response = await fetch('/api/profile', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify({
+                                email: this.profile.email,
+                                currentPassword: this.profile.currentPassword,
+                                newPassword: this.profile.newPassword
+                            })
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) {
+                            throw new Error(data.error || 'Falha ao salvar perfil');
+                        }
+                        this.profile.email = data.email || this.profile.email;
+                        this.profile.currentPassword = '';
+                        this.profile.newPassword = '';
+                        this.profileMsg = '✅ Perfil atualizado!';
+                        setTimeout(() => { this.profileMsg = ''; }, 3000);
+                    } catch (err) {
+                        this.profileError = err.message || 'Erro ao salvar perfil';
+                    } finally {
+                        this.profileSaving = false;
+                    }
+                },
+                parseCdnLinks(raw) {
+                    return String(raw || '')
+                        .split(/[\n,#]+/)
+                        .map(item => item.trim())
+                        .filter(Boolean);
+                },
+                onApkSelected(e) {
+                    const file = e.target.files && e.target.files[0];
+                    this.apkFileName = file ? file.name : '';
+                    this.apkUploadMsg = '';
+                },
+                async uploadApk() {
+                    const input = this.$refs.apkFile || document.getElementById('apkFileInput');
+                    const file = input && input.files && input.files[0];
+                    if (!file) return alert('Escolha um arquivo .apk primeiro.');
+                    this.apkUploading = true;
+                    this.apkUploadMsg = '';
+                    try {
+                        const form = new FormData();
+                        form.append('apk', file);
+                        form.append('AppVersion', String(this.config.AppVersion || 1));
+                        form.append('VersionName', String(this.config.VersionName || '1'));
+                        const response = await fetch('/api/apk/upload', { method: 'POST', body: form });
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || 'Falha no upload');
+                        this.config.UpdateApk = data.apkUrl || data.UpdateApk || '';
+                        if (data.AppVersion) this.config.AppVersion = data.AppVersion;
+                        if (data.VersionName) this.config.VersionName = data.VersionName;
+                        this.apkUploadMsg = '✅ APK enviado e UpdateApk atualizado.';
+                        this.saveStatus = '✅ APK publicado! Use “Salvar dados do APK” se mudou versão.';
+                        setTimeout(() => { this.saveStatus = ''; }, 3500);
+                    } catch (err) {
+                        alert(err.message || 'Erro ao enviar APK');
+                    } finally {
+                        this.apkUploading = false;
+                    }
+                },
+                async removeApk() {
+                    if (!confirm('Remover o APK do servidor?')) return;
+                    this.apkUploading = true;
+                    try {
+                        const response = await fetch('/api/apk', { method: 'DELETE' });
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || 'Falha ao remover');
+                        this.config.UpdateApk = '';
+                        this.apkFileName = '';
+                        this.apkUploadMsg = 'APK removido.';
+                        const input = document.getElementById('apkFileInput');
+                        if (input) input.value = '';
+                    } catch (err) {
+                        alert(err.message || 'Erro ao remover APK');
+                    } finally {
+                        this.apkUploading = false;
+                    }
+                },
+                displayCdnHost(item) {
+                    const value = (item && (item.host || item.url)) || '';
+                    return String(value).replace(/^https?:\/\//i, '');
+                },
+                formatTestedAt(iso) {
+                    if (!iso) return '';
+                    try {
+                        return new Date(iso).toLocaleString('pt-BR');
+                    } catch (e) {
+                        return iso;
+                    }
+                },
+                setMenu(menu) {
+                    this.activeMenu = menu;
+                    localStorage.setItem('activeMenu', menu);
+                    if (window.innerWidth <= 768) {
+                        toggleSidebar();
+                    }
+                },
+                async loadCdnPool() {
+                    try {
+                        const response = await fetch('/api/cdn-pool');
+                        const data = await response.json();
+                        this.cdnPool = data.urls || [];
+                        this.cdnInput = this.cdnPool
+                            .map(url => String(url || '').replace(/^https?:\/\//i, ''))
+                            .join('\n');
+                        this.cdnResults = data.results || [];
+                        this.cdnActive = data.active || [];
+                        this.cdnTestedAt = data.testedAt || null;
+                    } catch (e) {
+                        this.cdnPool = [];
+                    }
+                },
+                async saveCdnPool() {
+                    const urls = this.parseCdnLinks(this.cdnInput);
+                    const response = await fetch('/api/cdn-pool', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ urls }) });
+                    const data = await response.json();
+                    this.cdnPool = data.urls || [];
+                    this.cdnInput = this.cdnPool
+                        .map(url => String(url || '').replace(/^https?:\/\//i, ''))
+                        .join('\n');
+                    this.saveStatus = '✅ Pool CDN salvo!';
+                    setTimeout(() => { this.saveStatus = ''; }, 2500);
+                },
+                async testCdnPool() {
+                    this.cdnTesting = true;
+                    try {
+                        const urls = this.parseCdnLinks(this.cdnInput);
+                        const response = await fetch('/api/cdn-pool/test', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ urls }) });
+                        const data = await response.json();
+                        this.cdnResults = data.results || [];
+                        this.cdnActive = data.active || [];
+                        this.cdnTestedAt = data.testedAt || new Date().toISOString();
+                    } finally {
+                        this.cdnTesting = false;
+                    }
+                },
+                async copyActiveCdn() {
+                    // Fonte prioritária: resultados testados com status ONLINE
+                    const fromResults = (this.cdnResults || [])
+                        .filter(item => item && item.online)
+                        .map(item => item.url || item.host || '');
+                    const source = fromResults.length
+                        ? fromResults
+                        : (this.cdnActive || []);
+
+                    if (!source.length) {
+                        return alert('Nenhum link ONLINE encontrado. Clique em “Testar links” antes de copiar.');
+                    }
+
+                    // Copia só ativos e sem protocolo (sem https:// ou http://)
+                    const text = source
+                        .map(url => String(url || '').trim().replace(/^https?:\/\//i, ''))
+                        .filter(Boolean)
+                        .join('#');
+
+                    if (!text) {
+                        return alert('Nenhum link válido para copiar.');
+                    }
+
+                    let copied = false;
+                    try {
+                        if (navigator.clipboard && window.isSecureContext) {
+                            await navigator.clipboard.writeText(text);
+                            copied = true;
+                        }
+                    } catch (error) {
+                        copied = false;
+                    }
+                    if (!copied) {
+                        const helper = document.createElement('textarea');
+                        helper.value = text;
+                        helper.setAttribute('readonly', '');
+                        helper.style.position = 'fixed';
+                        helper.style.left = '-9999px';
+                        helper.style.top = '0';
+                        document.body.appendChild(helper);
+                        helper.focus();
+                        helper.select();
+                        helper.setSelectionRange(0, helper.value.length);
+                        try { copied = document.execCommand('copy'); } catch (error) { copied = false; }
+                        helper.remove();
+                    }
+                    if (copied) {
+                        this.saveStatus = '✅ Links ativos copiados!';
+                        setTimeout(() => { this.saveStatus = ''; }, 2500);
+                    } else {
+                        window.prompt('Copie manualmente os links ativos:', text);
+                    }
+                },
+                async persistConfig() {
+                    this.config.AppVersion = Number(this.config.AppVersion);
+                    this.config.Actualization = (this.config.Actualization === true || this.config.Actualization === 'true') ? 'true' : 'false';
+
+                    const response = await fetch('/dashboard/save', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ config_json: JSON.stringify(this.config) })
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || data.ok === false) {
+                        throw new Error((data && data.error) || 'Erro ao salvar as configurações no servidor.');
+                    }
+                    if (data.Version !== undefined) this.config.Version = Number(data.Version);
+                    if (data.UdpPort !== undefined) this.config.UdpPort = String(data.UdpPort);
+                    if (data.Contato !== undefined) this.config.Contato = String(data.Contato);
+                    if (data.Site !== undefined) this.config.Site = String(data.Site);
+                    if (data.AppVersion !== undefined) this.config.AppVersion = Number(data.AppVersion);
+                    if (data.VersionName !== undefined) this.config.VersionName = String(data.VersionName);
+                    if (data.Actualization !== undefined) this.config.Actualization = String(data.Actualization);
+                    if (data.UpdateApk !== undefined) this.config.UpdateApk = String(data.UpdateApk);
+                    if (data.Sms) this.config.Sms = Object.assign({ Version: '1', Update: '', Notes: '' }, data.Sms);
+                    if (data.Theme) this.config.Theme = Object.assign({}, this.config.Theme || {}, data.Theme);
+                    this.markGlobalSaved();
+                    return data;
+                },
+                async saveConfig() {
+                    if (this.isSaving) return;
+                    this.isSaving = true;
+                    this.saveStatus = '';
+                    try {
+                        await this.persistConfig();
+                        this.saveStatus = `✅ Config salva! Version=${this.config.Version}`;
+                        setTimeout(() => { this.saveStatus = ''; }, 3500);
+                    } catch (e) {
+                        alert(e.message || 'Erro ao salvar as configurações.');
+                    } finally {
+                        this.isSaving = false;
+                    }
+                },
+                async saveAllChanges() {
+                    if (this.isSaving) return;
+                    this.isSaving = true;
+                    this.saveStatus = '';
+                    try {
+                        await this.persistConfig();
+                        this.saveStatus = `✅ Configuração, servidores e tema salvos! Configuração v${this.config.Version}`;
+                        setTimeout(() => { this.saveStatus = ''; }, 4500);
+                    } catch (e) {
+                        alert(e.message || 'Erro ao salvar as alterações.');
+                    } finally {
+                        this.isSaving = false;
+                    }
+                },
+                async saveSmsOnly() {
+                    this.smsSaving = true;
+                    this.saveStatus = '';
+                    try {
+                        const response = await fetch('/api/sms', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify({
+                                Version: this.config.Sms.Version,
+                                Update: this.config.Sms.Update || '',
+                                Notes: this.config.Sms.Notes || ''
+                            })
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(data.error || 'Falha ao salvar SMS');
+                        if (data.Sms) this.config.Sms = Object.assign({ Version: '1', Update: '', Notes: '' }, data.Sms);
+                        this.saveStatus = `✅ SMS salvo! v${this.config.Sms.Version}`;
+                        setTimeout(() => { this.saveStatus = ''; }, 3000);
+                    } catch (err) {
+                        alert(err.message || 'Erro ao salvar SMS');
+                    } finally {
+                        this.smsSaving = false;
+                    }
+                },
+                async saveThemeOnly() {
+                    this.themeSaving = true;
+                    this.saveStatus = '';
+                    try {
+                        const response = await fetch('/api/theme', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify(this.config.Theme || {})
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(data.error || 'Falha ao salvar tema');
+                        if (data.Theme) this.config.Theme = Object.assign({}, this.config.Theme || {}, data.Theme);
+                        this.saveStatus = `✅ Tema salvo! v${this.config.Theme.Version}`;
+                        setTimeout(() => { this.saveStatus = ''; }, 3000);
+                    } catch (err) {
+                        alert(err.message || 'Erro ao salvar tema');
+                    } finally {
+                        this.themeSaving = false;
+                    }
+                },
+                exportConfig() {
+                    window.location.href = '/api/config/export';
+                },
+                async importConfig(e) {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) return;
+                    this.importMsg = '';
+                    try {
+                        const text = await file.text();
+                        const parsed = JSON.parse(text);
+                        const response = await fetch('/api/config/import', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify(parsed)
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(data.error || 'Falha ao importar');
+                        if (data.config) {
+                            this.config = Object.assign({}, this.config, data.config);
+                            if (!this.config.Sms) this.config.Sms = { Version: '1', Update: '', Notes: '' };
+                            if (!this.config.Theme) this.config.Theme = { Version: '1', AppName: 'ConnectPlus' };
+                            this.markGlobalSaved();
+                        }
+                        const summary = data.importSummary;
+                        if (summary && summary.source === 'external-array') {
+                            const warningText = Array.isArray(summary.warnings) && summary.warnings.length
+                                ? ` Avisos: ${summary.warnings.join(' ')}`
+                                : '';
+                            this.importMsg = `✅ ${summary.imported} servidores convertidos para o ConnectPlus.${warningText}`;
+                        } else {
+                            this.importMsg = '✅ Configuração importada com sucesso.';
+                        }
+                        this.saveStatus = '✅ Config importada!';
+                        setTimeout(() => { this.saveStatus = ''; this.importMsg = ''; }, 4000);
+                    } catch (err) {
+                        alert(err.message || 'JSON inválido');
+                    } finally {
+                        e.target.value = '';
+                    }
+                },
+                editItem(type, index) {
+                    this.modal.type = type;
+                    this.modal.index = index;
+                    this.modal.isOpen = true;
+                },
+                closeModal() {
+                    this.modal.isOpen = false;
+                },
+                onConnectionModeChange() {
+                    const server = this.config.Servers[this.modal.index];
+                    if (!server) return;
+                    if (server.Info === 'XHTTP') {
+                        server.Payload = '';
+                        if (server.ProxyPort === '443') server.ProxyPort = '';
+                    }
+                },
+                addServer() {
+                    this.config.Servers.push({
+                        Name: "Novo Servidor",
+                        ColorName: "#ffffff",
+                        Description: "",
+                        ColorDescription: "#ffffff",
+                        FLAG: "",
+                        ServerIP: "",
+                        ServerPort: "443",
+                        CheckUser: "",
+                        USER: "",
+                        PASS: "",
+                        Payload: "",
+                        ProxyIP: "",
+                        ProxyPort: "443",
+                        SNI: "",
+                        Path: "",
+                        TLSVersion: "TLSv1.2",
+                        Color: "#0000ff",
+                        Info: "Tlsws"
+                    });
+                    this.editItem('Servers', this.config.Servers.length - 1);
+                },
+                removeServer(idx) {
+                    if (confirm("Tem certeza que deseja excluir este servidor?")) {
+                        this.config.Servers.splice(idx, 1);
+                    }
+                },
+            }
+        }).mount('#app')
+
+        function copySpecificUrl(id) {
+            var copyText = document.getElementById(id);
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            document.execCommand("copy");
+            const btn = copyText.parentElement.querySelector('.btn');
+            btn.textContent = 'Copiado!';
+            setTimeout(() => btn.textContent = 'Copiar', 2000);
+        }
+
+        function copyUrl() {
+            copySpecificUrl('configUrl');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const closeBtn = document.getElementById('closeMenuBtn');
+            sidebar.classList.toggle('open');
+            if(window.innerWidth <= 768) {
+                closeBtn.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+            }
+        }
+        
+        window.addEventListener('resize', () => {
+            const closeBtn = document.getElementById('closeMenuBtn');
+            if(window.innerWidth > 768) {
+                document.getElementById('sidebar').classList.remove('open');
+                closeBtn.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConnectPlus · C5G Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/vendor/vue.global.prod.js"></script>
+    <style>
+        .color-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .color-control label {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        .color-control input[type="color"] {
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 0;
+            background: transparent;
+        }
+        .section-title {
+            font-size: 1.1rem;
+            color: var(--primary);
+            margin: 1.5rem 0 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .account-countdown {
+            margin-top: .35rem;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .01em;
+            color: #93c5fd;
+        }
+        .account-countdown.warning { color: #fbbf24; }
+        .account-countdown.danger { color: #fb7185; }
+        .text-warning { color: #fbbf24 !important; }
+        .text-danger { color: #fb7185 !important; }
+        .account-dates-card {
+            position: relative;
+            overflow: hidden;
+            margin-top: 1.25rem;
+            border-color: rgba(110,168,254,.24);
+            background: radial-gradient(circle at 100% 0%, rgba(59,130,246,.16), transparent 38%), linear-gradient(145deg, rgba(19,35,61,.94), rgba(8,15,28,.96));
+        }
+        .account-dates-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #60a5fa, #34d399);
+        }
+        .account-dates-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.15rem; }
+        .account-dates-heading { margin: 0 0 .35rem; color: #fff; font-size: 1.15rem; }
+        .account-dates-description { margin: 0; }
+        .account-status-pill { display: inline-flex; align-items: center; gap: .45rem; flex: 0 0 auto; padding: .55rem .75rem; border: 1px solid rgba(52,211,153,.28); border-radius: 999px; background: rgba(6,78,59,.22); color: #6ee7b7; font-size: .78rem; font-weight: 800; white-space: nowrap; }
+        .account-status-pill::before { content: ''; width: .45rem; height: .45rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 .22rem rgba(52,211,153,.12); }
+        .account-status-pill.warning { border-color: rgba(251,191,36,.35); background: rgba(120,53,15,.22); color: #fbbf24; }
+        .account-status-pill.warning::before { box-shadow: 0 0 0 .22rem rgba(251,191,36,.12); }
+        .account-status-pill.danger { border-color: rgba(251,113,133,.35); background: rgba(127,29,29,.22); color: #fb7185; }
+        .account-status-pill.danger::before { box-shadow: 0 0 0 .22rem rgba(251,113,133,.12); }
+        .account-dates-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
+        .account-date-item { min-width: 0; padding: 1rem; border: 1px solid rgba(148,163,184,.16); border-radius: .85rem; background: rgba(15,23,42,.48); box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
+        .account-date-label { display: block; margin-bottom: .4rem; color: #94a3b8; font-size: .7rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+        .account-date-value { display: block; overflow-wrap: anywhere; color: #f8fafc; font-size: 1rem; font-weight: 750; line-height: 1.35; }
+        .account-dates-footer { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: 1rem; color: #94a3b8; font-size: .78rem; }
+        .account-dates-footer strong { color: #dbeafe; font-weight: 700; }
+        @media (max-width: 640px) {
+            .account-dates-head { flex-direction: column; }
+            .account-status-pill { align-self: flex-start; }
+            .account-dates-grid { grid-template-columns: 1fr; }
+            .account-dates-footer { align-items: flex-start; flex-direction: column; }
+        }
+    </style>
+</head>
+<body class="dashboard-body">
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <button class="menu-toggle mobile-menu-left" onclick="toggleSidebar()" aria-label="Abrir menu">☰</button>
+        <div class="brand"><span class="brand-mark">CP</span><span>ConnectPlus</span></div>
+        <span class="mobile-header-spacer" aria-hidden="true"></span>
+    </header>
+
+    <div id="app" v-cloak style="display: flex; width: 100%;">
+        
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="brand" style="justify-content: space-between;">
+                <div class="brand-name"><span class="brand-mark">CP</span><span>ConnectPlus</span></div>
+                <button class="menu-toggle" style="display: none; padding-right:0;" onclick="toggleSidebar()" id="closeMenuBtn">✖</button>
+            </div>
+            
+            <div class="menu-label">Painel de controle</div>
+            <nav class="nav-menu">
+                <div class="nav-item" :class="{active: activeMenu === 'dashboard'}" @click="setMenu('dashboard')">
                     <span class="nav-icon" aria-hidden="true">📊</span><span>Visão Geral</span>
                 </div>
                 <div class="nav-item" :class="{active: activeMenu === 'general'}" @click="setMenu('general')">
