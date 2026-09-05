@@ -2242,3 +2242,40 @@ body.dashboard-body .floating-save-bar .btn.primary:disabled {
 @media (max-width: 640px) {
     .floating-save-bar .save-status { display: none; }
 }
+
+
+/* ConnectPlus brand asset */
+body.dashboard-body .brand-logo-image {
+    display: block;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    object-fit: contain;
+    filter: drop-shadow(0 5px 12px rgba(37, 99, 235, .28));
+}
+
+body.dashboard-body .mobile-header .brand-logo-image {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+}
+
+body.dashboard-body .sidebar .brand-logo-image {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+}
+
+@media (max-width: 768px) {
+    body.dashboard-body .mobile-header .brand-logo-image {
+        width: 32px;
+        height: 32px;
+        flex-basis: 32px;
+    }
+
+    body.dashboard-body .sidebar .brand-logo-image {
+        width: 38px;
+        height: 38px;
+        flex-basis: 38px;
+    }
+}
