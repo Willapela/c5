@@ -71,6 +71,8 @@ body.dashboard-body .list-item:hover {
     box-shadow: var(--shadow-soft) !important;
     transform: none !important;
 }
+.list-item-title { color: var(--text-primary) !important; }
+.list-item-subtitle { color: var(--text-muted) !important; }
 
 /* ---------- 4. Sidebar e cabeçalho mobile ------------------------------- */
 .sidebar,
