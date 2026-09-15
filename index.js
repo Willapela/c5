@@ -13,36 +13,6 @@ const app = express();
 const PORT = Number(process.env.PORT || 2000);
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_c5g_key_for_testing';
 
-// Planos de acesso (valores em BRL). Ajuste via env se quiser.
-const PLANS = [
-    {
-        id: 'monthly',
-        name: 'Mensal',
-        days: 30,
-        price: Number(process.env.PLAN_MONTHLY_PRICE || 29.9),
-        description: 'Acesso completo por 30 dias'
-    },
-    {
-        id: 'quarterly',
-        name: 'Trimestral',
-        days: 90,
-        price: Number(process.env.PLAN_QUARTERLY_PRICE || 79.9),
-        description: 'Acesso completo por 90 dias'
-    },
-    {
-        id: 'yearly',
-        name: 'Anual',
-        days: 365,
-        price: Number(process.env.PLAN_YEARLY_PRICE || 249.9),
-        description: 'Acesso completo por 1 ano'
-    }
-];
-
-const PIX_KEY = process.env.PIX_KEY || '';
-const PIX_NAME = process.env.PIX_NAME || 'ConnectPlus';
-const PIX_CITY = process.env.PIX_CITY || 'SAO PAULO';
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
-
 // Recuperação de senha por e-mail. As credenciais devem ficar somente nas variáveis de ambiente.
 const SMTP_HOST = String(process.env.SMTP_HOST || '').trim();
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
@@ -58,154 +28,6 @@ const RESET_TOKEN_TTL_MS = Math.max(5, Number(process.env.RESET_TOKEN_TTL_MINUTE
 const RESET_RATE_WINDOW_MS = 15 * 60 * 1000;
 const RESET_RATE_MAX = 5;
 const resetRateBuckets = new Map();
-
-// Mercado Pago — token pode vir do painel admin (data/settings.json) ou do env
-const ORDERS_DIR = path.join(__dirname, 'data', 'orders');
-const SETTINGS_FILE = path.join(__dirname, 'data', 'settings.json');
-if (!fs.existsSync(ORDERS_DIR)) {
-    fs.mkdirSync(ORDERS_DIR, { recursive: true });
-}
-if (!fs.existsSync(path.dirname(SETTINGS_FILE))) {
-    fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
-}
-
-function readSettings() {
-    try {
-        if (fs.existsSync(SETTINGS_FILE)) {
-            return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) || {};
-        }
-    } catch (e) { /* ignore */ }
-    return {};
-}
-
-function writeSettings(next) {
-    const cur = readSettings();
-    const merged = { ...cur, ...next, updatedAt: new Date().toISOString() };
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(merged, null, 2));
-    return merged;
-}
-
-function getMpAccessToken() {
-    const s = readSettings();
-    return String(s.mpAccessToken || process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN || '').trim();
-}
-
-function getPixKey() {
-    const s = readSettings();
-    return String(s.pixKey || process.env.PIX_KEY || PIX_KEY || '').trim();
-}
-
-function getPlanPrice(planId, fallback) {
-    const s = readSettings();
-    const prices = s.planPrices || {};
-    if (prices[planId] !== undefined && prices[planId] !== null && prices[planId] !== '') {
-        return Number(prices[planId]);
-    }
-    return Number(fallback);
-}
-
-function getPlansLive() {
-    return PLANS.map((p) => ({
-        ...p,
-        price: getPlanPrice(p.id, p.price)
-    }));
-}
-
-function getPlan(planId) {
-    const base = PLANS.find((p) => p.id === String(planId || '')) || null;
-    if (!base) return null;
-    return { ...base, price: getPlanPrice(base.id, base.price) };
-}
-
-async function mpCreatePixPayment({ amount, description, email, externalReference }) {
-    if (!getMpAccessToken()) throw new Error('MP_ACCESS_TOKEN não configurado');
-    const body = {
-        transaction_amount: Number(Number(amount).toFixed(2)),
-        description: String(description || 'Plano ConnectPlus').slice(0, 250),
-        payment_method_id: 'pix',
-        payer: {
-            email: String(email || 'cliente@connectplus.local')
-        },
-        external_reference: String(externalReference || ''),
-        notification_url: process.env.MP_NOTIFICATION_URL || undefined
-    };
-    const res = await fetch('https://api.mercadopago.com/v1/payments', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${getMpAccessToken()}`,
-            'Content-Type': 'application/json',
-            'X-Idempotency-Key': `${externalReference || Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-        },
-        body: JSON.stringify(body)
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-        const msg = data.message || data.error || JSON.stringify(data) || `HTTP ${res.status}`;
-        throw new Error(msg);
-    }
-    const tx = data.point_of_interaction && data.point_of_interaction.transaction_data
-        ? data.point_of_interaction.transaction_data
-        : {};
-    return {
-        paymentId: String(data.id),
-        status: data.status,
-        qrCode: tx.qr_code || '',
-        qrCodeBase64: tx.qr_code_base64 || '',
-        ticketUrl: tx.ticket_url || ''
-    };
-}
-
-async function mpGetPayment(paymentId) {
-    if (!getMpAccessToken()) throw new Error('MP_ACCESS_TOKEN não configurado');
-    const res = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`, {
-        headers: { 'Authorization': `Bearer ${getMpAccessToken()}` }
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
-    return data;
-}
-
-function fulfillOrder(order) {
-    if (!order || order.status === 'paid') return order;
-    const target = getUser(order.username);
-    if (!target) throw new Error('Usuário do pedido não encontrado');
-    extendUserAccess(target, order.days);
-    target.plan = order.planId;
-    saveUser(target.username, target);
-    order.status = 'paid';
-    order.paidAt = new Date().toISOString();
-    order.expiresAtAfter = target.expiresAt;
-    saveOrder(order);
-    return order;
-}
-
-function saveOrder(order) {
-    const file = path.join(ORDERS_DIR, `${order.id}.json`);
-    fs.writeFileSync(file, JSON.stringify(order, null, 2));
-    return order;
-}
-
-function getOrder(id) {
-    const file = path.join(ORDERS_DIR, `${id}.json`);
-    if (!fs.existsSync(file)) return null;
-    try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return null; }
-}
-
-function listPendingOrders() {
-    if (!fs.existsSync(ORDERS_DIR)) return [];
-    return fs.readdirSync(ORDERS_DIR)
-        .filter((n) => n.endsWith('.json'))
-        .map((n) => {
-            try { return JSON.parse(fs.readFileSync(path.join(ORDERS_DIR, n), 'utf8')); }
-            catch (e) { return null; }
-        })
-        .filter((o) => o && o.status === 'pending');
-}
-
-function formatBRL(value) {
-    return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ limit: '2mb' }));
@@ -597,34 +419,9 @@ function isAdminUser(user) {
     return false;
 }
 
-function getExpiresAt(user) {
-    if (!user || !user.expiresAt) return null;
-    const d = new Date(user.expiresAt);
-    return Number.isNaN(d.getTime()) ? null : d;
-}
-
 function isSubscriptionActive(user) {
-    if (!user) return false;
-    if (isAdminUser(user)) return true;
-    // Contas antigas sem expiresAt continuam ativas até definir validade
-    const exp = getExpiresAt(user);
-    if (!exp) return true;
-    return exp.getTime() > Date.now();
-}
-
-function addDaysIso(days) {
-    const d = new Date();
-    d.setDate(d.getDate() + Number(days || 0));
-    return d.toISOString();
-}
-
-function extendUserAccess(user, days) {
-    const now = Date.now();
-    const current = getExpiresAt(user);
-    const base = current && current.getTime() > now ? new Date(current.getTime()) : new Date();
-    base.setDate(base.getDate() + Number(days || 0));
-    user.expiresAt = base.toISOString();
-    return user.expiresAt;
+    // Planos/pagamento removidos: acesso liberado para todas as contas.
+    return !!user;
 }
 
 function getCdnPool(user) {
@@ -777,15 +574,13 @@ function requireAuth(req, res, next) {
 function requireActivePlan(req, res, next) {
     const user = req.userFull || getUser(req.user && req.user.username);
     if (!user) return res.redirect('/login');
-    if (isSubscriptionActive(user)) return next();
-    return res.redirect('/renew');
+    next();
 }
 
 function requireActivePlanApi(req, res, next) {
     const user = req.userFull || getUser(req.user && req.user.username);
     if (!user) return res.status(401).json({ error: 'Não autenticado' });
-    if (isSubscriptionActive(user)) return next();
-    return res.status(402).json({ error: 'Plano expirado', expiresAt: user.expiresAt || null });
+    next();
 }
 
 // Routes
@@ -953,8 +748,6 @@ app.post('/register', async (req, res) => {
             config_json: configJsonStr,
             updateUuid: crypto.randomUUID(),
             created_at: new Date().toISOString(),
-            plan: 'trial',
-            expiresAt: addDaysIso(7),
             isAdmin: false
         });
         res.redirect('/login');
@@ -1042,291 +835,6 @@ app.get('/logout', (req, res) => {
     res.clearCookie('auth_token').redirect('/login');
 });
 
-// Renovação / plano expirado
-app.get('/renew', requireAuth, (req, res) => {
-    const user = req.userFull || getUser(req.user.username);
-    if (!user) return res.redirect('/login');
-    if (isSubscriptionActive(user)) return res.redirect('/dashboard');
-    const exp = getExpiresAt(user);
-    const expLabel = exp ? exp.toLocaleString('pt-BR') : 'sem data';
-    res.status(402).send(`<!DOCTYPE html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Acesso expirado</title>
-<style>
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;background:#070b14;color:#f8fafc}
-.card{max-width:440px;width:92%;padding:2rem;border-radius:1.2rem;border:1px solid rgba(110,168,254,.2);background:linear-gradient(145deg,#111c2e,#09111f);box-shadow:0 24px 70px rgba(0,0,0,.4)}
-h1{margin:0 0 .75rem;font-size:1.5rem}
-p{color:#94a3b8;line-height:1.5}
-a{color:#6ea8fe}
-.badge{display:inline-block;margin:.5rem 0 1rem;padding:.35rem .7rem;border-radius:999px;background:rgba(251,113,133,.12);border:1px solid rgba(251,113,133,.28);color:#fb7185;font-size:.8rem;font-weight:700}
-</style></head>
-<body><div class="card">
-<h1>Acesso expirado</h1>
-<div class="badge">Plano inativo</div>
-<p>Sua conta <strong>${user.username}</strong> não está ativa.</p>
-<p>Validade: <strong>${expLabel}</strong></p>
-<p>Escolha um plano e pague via PIX para liberar o acesso automaticamente após a confirmação.</p>
-<p style="margin-top:1.5rem"><a href="/planos" style="display:inline-block;padding:.7rem 1.1rem;border-radius:.7rem;background:linear-gradient(135deg,#5f9dfb,#356ff1);color:#fff;text-decoration:none;font-weight:700">Ver planos</a></p>
-<p style="margin-top:1rem"><a href="/logout">Sair</a></p>
-</div></body></html>`);
-});
-
-
-// ===== Planos e pagamento (PIX) =====
-app.get('/planos', requireAuth, (req, res) => {
-    const user = req.userFull || getUser(req.user.username);
-    if (!user) return res.redirect('/login');
-    res.render('planos', {
-        user: {
-            username: user.username,
-            email: user.email || '',
-            plan: user.plan || 'trial',
-            expiresAt: user.expiresAt || null,
-            active: isSubscriptionActive(user),
-            isAdmin: isAdminUser(user)
-        },
-        plans: getPlansLive(),
-        pixKey: getPixKey(),
-        pixName: PIX_NAME,
-        formatBRL
-    });
-});
-
-app.post('/api/plans/order', requireAuth, async (req, res) => {
-    try {
-        const user = req.userFull || getUser(req.user.username);
-        if (!user) return res.status(401).json({ error: 'Não autenticado' });
-        const plan = getPlan(req.body.planId);
-        if (!plan) return res.status(400).json({ error: 'Plano inválido' });
-
-        const order = {
-            id: `ord_${Date.now()}_${String(user.username).replace(/[^a-zA-Z0-9_-]/g, '')}`,
-            username: user.username,
-            planId: plan.id,
-            planName: plan.name,
-            days: plan.days,
-            price: plan.price,
-            status: 'pending',
-            method: getMpAccessToken() ? 'mercadopago_pix' : 'pix_manual',
-            paymentId: null,
-            createdAt: new Date().toISOString(),
-            paidAt: null
-        };
-
-        // Mercado Pago PIX (PainelPro-style) — gera QR / copia-e-cola
-        if (getMpAccessToken()) {
-            const email = user.email || `${user.username}@connectplus.local`;
-            const mp = await mpCreatePixPayment({
-                amount: plan.price,
-                description: `ConnectPlus ${plan.name} (${plan.days} dias)`,
-                email,
-                externalReference: order.id
-            });
-            order.paymentId = mp.paymentId;
-            order.mpStatus = mp.status;
-            saveOrder(order);
-            return res.json({
-                ok: true,
-                order,
-                pix: {
-                    provider: 'mercadopago',
-                    paymentId: mp.paymentId,
-                    key: mp.qrCode, // copia e cola PIX
-                    qrCode: mp.qrCode,
-                    qrCodeBase64: mp.qrCodeBase64,
-                    ticketUrl: mp.ticketUrl,
-                    amount: plan.price,
-                    amountLabel: formatBRL(plan.price),
-                    message: 'Escaneie o QR Code ou copie o código PIX. O acesso libera automático após o pagamento.'
-                }
-            });
-        }
-
-        // Fallback: chave PIX manual (admin confirma)
-        saveOrder(order);
-        res.json({
-            ok: true,
-            order,
-            pix: {
-                provider: 'manual',
-                key: getPixKey() || null,
-                name: PIX_NAME,
-                city: PIX_CITY,
-                amount: plan.price,
-                amountLabel: formatBRL(plan.price),
-                message: getPixKey()
-                    ? `Faça o PIX de ${formatBRL(plan.price)} e aguarde a confirmação do admin.`
-                    : 'Configure MP_ACCESS_TOKEN (Mercado Pago) ou PIX_KEY no servidor.'
-            }
-        });
-    } catch (err) {
-        console.error('order error', err);
-        res.status(500).json({ error: err.message || 'Falha ao criar pagamento' });
-    }
-});
-
-// Admin confirma pagamento e libera dias
-
-
-// Consulta status do pagamento (polling no front — igual PainelPro verify)
-app.get('/api/plans/order/:id/status', requireAuth, async (req, res) => {
-    try {
-        const order = getOrder(req.params.id);
-        if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
-        const user = req.userFull || getUser(req.user.username);
-        if (!user) return res.status(401).json({ error: 'Não autenticado' });
-        if (order.username !== user.username && !isAdminUser(user)) {
-            return res.status(403).json({ error: 'Sem permissão' });
-        }
-
-        if (order.status === 'paid') {
-            return res.json({ ok: true, status: 'paid', order });
-        }
-
-        // Mercado Pago: consulta API
-        if (order.paymentId && getMpAccessToken()) {
-            const pay = await mpGetPayment(order.paymentId);
-            order.mpStatus = pay.status;
-            if (pay.status === 'approved') {
-                fulfillOrder(order);
-                return res.json({ ok: true, status: 'paid', order });
-            }
-            saveOrder(order);
-            return res.json({ ok: true, status: pay.status || 'pending', order });
-        }
-
-        res.json({ ok: true, status: order.status || 'pending', order });
-    } catch (err) {
-        console.error('status error', err);
-        res.status(500).json({ error: err.message || 'Erro ao consultar pagamento' });
-    }
-});
-
-// Webhook Mercado Pago (opcional)
-app.post('/api/webhooks/mercadopago', async (req, res) => {
-    try {
-        res.status(200).send('OK');
-        const paymentId = req.body && (req.body.data && req.body.data.id) || req.query.id || req.body.id;
-        if (!paymentId || !getMpAccessToken()) return;
-        const pay = await mpGetPayment(paymentId);
-        if (pay.status !== 'approved') return;
-        const ref = pay.external_reference;
-        if (!ref) return;
-        const order = getOrder(ref);
-        if (!order || order.status === 'paid') return;
-        order.paymentId = String(paymentId);
-        fulfillOrder(order);
-        console.log('MP webhook: order paid', ref);
-    } catch (err) {
-        console.error('webhook mp', err);
-    }
-});
-
-
-// Configuração de pagamento (somente admin)
-app.get('/api/admin/payment-settings', requireAuth, (req, res) => {
-    const admin = req.userFull || getUser(req.user.username);
-    if (!isAdminUser(admin)) return res.status(403).json({ error: 'Apenas admin' });
-    const s = readSettings();
-    const token = getMpAccessToken();
-    res.json({
-        ok: true,
-        mpConfigured: !!token,
-        mpAccessTokenMasked: token ? (token.slice(0, 12) + '…' + token.slice(-6)) : '',
-        hasTokenSaved: !!(s.mpAccessToken),
-        pixKey: getPixKey(),
-        pixName: s.pixName || PIX_NAME,
-        planPrices: {
-            monthly: getPlanPrice('monthly', 29.9),
-            quarterly: getPlanPrice('quarterly', 79.9),
-            yearly: getPlanPrice('yearly', 249.9)
-        }
-    });
-});
-
-app.post('/api/admin/payment-settings', requireAuth, (req, res) => {
-    const admin = req.userFull || getUser(req.user.username);
-    if (!isAdminUser(admin)) return res.status(403).json({ error: 'Apenas admin' });
-
-    const body = req.body || {};
-    const next = {};
-
-    if (body.mpAccessToken !== undefined) {
-        const tok = String(body.mpAccessToken || '').trim();
-        // string vazia = não apaga; use clearMpToken: true para remover
-        if (tok) next.mpAccessToken = tok;
-    }
-    if (body.clearMpToken === true) next.mpAccessToken = '';
-
-    if (body.pixKey !== undefined) next.pixKey = String(body.pixKey || '').trim();
-    if (body.pixName !== undefined) next.pixName = String(body.pixName || '').trim();
-
-    if (body.planPrices && typeof body.planPrices === 'object') {
-        const cur = readSettings().planPrices || {};
-        next.planPrices = {
-            ...cur,
-            monthly: body.planPrices.monthly !== undefined ? Number(body.planPrices.monthly) : cur.monthly,
-            quarterly: body.planPrices.quarterly !== undefined ? Number(body.planPrices.quarterly) : cur.quarterly,
-            yearly: body.planPrices.yearly !== undefined ? Number(body.planPrices.yearly) : cur.yearly
-        };
-    }
-
-    const saved = writeSettings(next);
-    const token = getMpAccessToken();
-    res.json({
-        ok: true,
-        mpConfigured: !!token,
-        mpAccessTokenMasked: token ? (token.slice(0, 12) + '…' + token.slice(-6)) : '',
-        pixKey: getPixKey(),
-        planPrices: {
-            monthly: getPlanPrice('monthly', 29.9),
-            quarterly: getPlanPrice('quarterly', 79.9),
-            yearly: getPlanPrice('yearly', 249.9)
-        }
-    });
-});
-
-app.post('/api/admin/confirm-order', requireAuth, (req, res) => {
-    const admin = req.userFull || getUser(req.user.username);
-    if (!isAdminUser(admin) && !(ADMIN_TOKEN && req.headers['x-admin-token'] === ADMIN_TOKEN)) {
-        return res.status(403).json({ error: 'Apenas admin' });
-    }
-    const order = getOrder(req.body.orderId);
-    if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
-    if (order.status === 'paid') return res.json({ ok: true, order, message: 'Já estava pago' });
-    try {
-        fulfillOrder(order);
-        order.confirmedBy = admin.username;
-        saveOrder(order);
-        res.json({ ok: true, order, expiresAt: order.expiresAtAfter });
-    } catch (err) {
-        res.status(400).json({ error: err.message || 'Falha ao confirmar' });
-    }
-});
-
-// Admin libera dias manualmente
-app.post('/api/admin/extend', requireAuth, (req, res) => {
-    const admin = req.userFull || getUser(req.user.username);
-    if (!isAdminUser(admin) && !(ADMIN_TOKEN && req.headers['x-admin-token'] === ADMIN_TOKEN)) {
-        return res.status(403).json({ error: 'Apenas admin' });
-    }
-    const username = String(req.body.username || '').trim();
-    const days = Number(req.body.days || 0);
-    if (!username || !days || days < 1) return res.status(400).json({ error: 'username e days obrigatórios' });
-    const target = getUser(username);
-    if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
-    extendUserAccess(target, days);
-    if (req.body.plan) target.plan = String(req.body.plan);
-    saveUser(target.username, target);
-    res.json({ ok: true, username: target.username, expiresAt: target.expiresAt, plan: target.plan });
-});
-
-app.get('/api/admin/orders/pending', requireAuth, (req, res) => {
-    const admin = req.userFull || getUser(req.user.username);
-    if (!isAdminUser(admin)) return res.status(403).json({ error: 'Apenas admin' });
-    res.json({ orders: listPendingOrders() });
-});
-
 
 // Dashboard
 app.get('/dashboard', requireAuth, requireActivePlan, (req, res) => {
@@ -1345,9 +853,6 @@ app.get('/dashboard', requireAuth, requireActivePlan, (req, res) => {
             email: user.email || '',
             updateUuid,
             created_at: user.created_at || null,
-            plan: user.plan || 'trial',
-            expiresAt: user.expiresAt || null,
-            active: isSubscriptionActive(user),
             isAdmin: isAdminUser(user)
         },
         configStr: JSON.stringify(parseUserConfig(user), null, 2),
@@ -1891,8 +1396,6 @@ app.get('/:username/theme', (req, res) => {
     if (!user) return res.status(404).send('Not Found');
     sendDynamicJson(res, buildThemePayload(req, username, user));
 });
-console.log('Mercado Pago:', (typeof getMpAccessToken === 'function' && getMpAccessToken()) ? 'CONFIGURADO' : 'NÃO configurado (modo PIX manual)');
-
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`C5G Panel listening on port ${PORT}`);
     void verifySmtpConfiguration();
