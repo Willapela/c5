@@ -365,45 +365,103 @@
                 </div>
             </div>
 
-                        <!-- Servers Section -->
-            <div v-show="activeMenu === 'servers'">
-                <div class="page-header servers-header">
-                    <div>
-                        <div class="eyebrow">CONNECTPLUS</div>
-                        <h1 class="page-title">Servidores</h1>
-                        <p class="text-muted">Gerencie seus servidores e IPs.</p>
-                    </div>
-                    <div class="servers-actions">
-                        <button type="button" class="btn primary servers-add-btn" @click="addServer">＋ Novo Servidor</button>
-                        <div class="servers-io-row">
-                            <button type="button" class="btn secondary" @click="exportConfig">⬇ Exportar</button>
-                            <label class="btn secondary servers-import-btn">
-                                ⬆ Importar
-                                <input type="file" accept="application/json,.json" @change="importConfig">
-                            </label>
-                        </div>
-                        <span v-if="importMsg" class="servers-import-msg">{{ importMsg }}</span>
-                    </div>
-                </div>
-
-                <div class="list-container">
-                    <div class="list-item" v-for="(srv, index) in config.Servers" :key="index" @click="editItem('Servers', index)">
-                        <div class="list-item-content">
-                            <div class="list-item-title">{{ srv.Name || 'Servidor Sem Nome' }}</div>
-                            <div class="list-item-subtitle">{{ srv.ServerIP }} : {{ srv.ServerPort }} &nbsp;|&nbsp; {{ srv.Info || srv.TYPE || 'Sem modo' }}</div>
-                        </div>
-                        <div class="list-item-actions">
-                            <button class="action-icon-btn danger" @click.stop="removeServer(index)" title="Excluir">✖</button>
-                        </div>
-                    </div>
-
-                    <div v-if="config.Servers.length === 0" class="text-muted" style="text-align: center; padding: 2rem;">
-                        Nenhum servidor encontrado. Clique em "Novo Servidor" para adicionar.
-                    </div>
-                </div>
-
-                <p class="text-muted" style="margin-top: 1rem;">Os servidores serão salvos junto com as demais alterações pelo botão <strong>Salvar alterações</strong> na barra lateral.</p>
+<!-- Servers Section -->
+<div v-show="activeMenu === 'servers'">
+    <div class="page-header servers-header">
+        <div>
+            <div class="eyebrow">CONNECTPLUS</div>
+            <h1 class="page-title">Servidores</h1>
+            <p class="text-muted">
+                {{ config.Servers.length }} servidor{{ config.Servers.length === 1 ? '' : 'es' }} configurado{{ config.Servers.length === 1 ? '' : 's' }}
+            </p>
+        </div>
+        <div class="servers-actions">
+            <button type="button" class="btn primary servers-add-btn" @click="addServer">
+                ＋ Novo Servidor
+            </button>
+            <div class="servers-io-row">
+                <button type="button" class="btn secondary" @click="exportConfig">⬇ Exportar</button>
+                <label class="btn secondary servers-import-btn">
+                    ⬆ Importar
+                    <input type="file" accept="application/json,.json" @change="importConfig">
+                </label>
             </div>
+            <span v-if="importMsg" class="servers-import-msg">{{ importMsg }}</span>
+        </div>
+    </div>
+
+    <div class="servers-grid" v-if="config.Servers.length">
+        <div
+            class="server-card"
+            v-for="(srv, index) in config.Servers"
+            :key="index"
+            @click="editItem('Servers', index)"
+        >
+            <div class="server-card-top">
+                <div class="server-card-flag" v-if="srv.FLAG">
+                    <img :src="srv.FLAG" alt="" @error="$event.target.style.display='none'">
+                </div>
+                <div class="server-card-flag server-card-flag-fallback" v-else>
+                    {{ (srv.Name || 'S').charAt(0).toUpperCase() }}
+                </div>
+
+                <div class="server-card-main">
+                    <div class="server-card-name">{{ srv.Name || 'Servidor Sem Nome' }}</div>
+                    <div class="server-card-desc" v-if="srv.Description">{{ srv.Description }}</div>
+                </div>
+
+                <span class="server-mode-badge" :class="'mode-' + (srv.Info || 'Tlsws').toLowerCase()">
+                    {{ srv.Info || srv.TYPE || 'Tlsws' }}
+                </span>
+            </div>
+
+            <div class="server-card-meta">
+                <div class="server-meta-item">
+                    <span class="server-meta-label">Host</span>
+                    <code>{{ srv.ServerIP || '—' }}:{{ srv.ServerPort || '—' }}</code>
+                </div>
+                <div class="server-meta-item" v-if="srv.SNI">
+                    <span class="server-meta-label">SNI</span>
+                    <code>{{ srv.SNI }}</code>
+                </div>
+                <div class="server-meta-item" v-if="srv.ProxyIP">
+                    <span class="server-meta-label">Proxy</span>
+                    <code>{{ srv.ProxyIP }}{{ srv.ProxyPort ? ':' + srv.ProxyPort : '' }}</code>
+                </div>
+            </div>
+
+            <div class="server-card-footer">
+                <div class="server-tags">
+                    <span class="server-tag" v-if="srv.USER">Usuário</span>
+                    <span class="server-tag" v-if="srv.Payload">Payload</span>
+                    <span class="server-tag" v-if="srv.CheckUser">Check</span>
+                    <span class="server-tag muted" v-if="!srv.ServerIP">Sem IP</span>
+                </div>
+                <button
+                    class="action-icon-btn danger"
+                    @click.stop="removeServer(index)"
+                    title="Excluir servidor"
+                >✖</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-else class="servers-empty">
+        <div class="servers-empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" width="40" height="40">
+                <rect x="4" y="5" width="16" height="11" rx="1.8" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M8 20h8M12 16v4M8 9h.01M11 9h.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <h3>Nenhum servidor ainda</h3>
+        <p class="text-muted">Adicione o primeiro servidor para o app começar a usar sua configuração.</p>
+        <button type="button" class="btn primary" @click="addServer">＋ Adicionar servidor</button>
+    </div>
+
+    <p class="text-muted servers-save-hint">
+        Os servidores são salvos junto com as demais alterações pelo botão <strong>Salvar alterações</strong> na barra inferior.
+    </p>
+</div>
             <!-- SMS Section -->
             <div v-show="activeMenu === 'sms'">
                 <div class="page-header">
