@@ -98,7 +98,6 @@
                     <div>
                         <div style="font-weight: 600; color: var(--text-primary);"><%= user.username %></div>
                         <div style="font-size: 0.8rem; color: var(--text-muted);"><%= user.email || 'Sem e-mail' %></div>
-                        <div style="font-size: 0.68rem; color: #1d4ed8; margin-top: .25rem; word-break: break-all;" title="UUID de atualização">UUID: <%= user.updateUuid %></div>
                     </div>
                 </div>
                 <a href="/logout" class="btn danger full-width small" style="margin-top: 0.5rem;">Sair</a>
@@ -116,42 +115,28 @@
                 </div>
                 
                 <div class="glass-container config-card" style="margin-bottom: 2rem;">
-                    <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Identificador único de atualização</h3>
-                    <p class="text-muted" style="margin-bottom: 1rem;">Agora o aplicativo pode usar somente este UUID. O painel resolve automaticamente os links de configuração, appupdate, tema e SMS.</p>
+                    <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Links públicos do aplicativo</h3>
+                    <p class="text-muted" style="margin-bottom: 1rem;">Use estes links no app (formato ConnectPlus atualizado).</p>
+                    <p class="text-muted" style="margin: .5rem 0 0;">Configuração:</p>
                     <div class="url-box" style="margin-bottom: .75rem;">
-                        <input type="text" readonly value="<%= user.updateUuid %>" id="updateUuid">
-                        <button onclick="copySpecificUrl('updateUuid')" class="btn secondary">Copiar UUID</button>
+                        <input type="text" readonly value="<%= appUrl %>" id="configUrl">
+                        <button onclick="copySpecificUrl('configUrl')" class="btn secondary">Copiar</button>
                     </div>
-                    <p class="text-muted" style="margin: .5rem 0 0;">Endpoint unificado para o app consultar o mapa de atualizações:</p>
+                    <p class="text-muted" style="margin: .5rem 0 0;">Appupdate / APK:</p>
                     <div class="url-box" style="margin-bottom: .75rem;">
-                        <input type="text" readonly value="<%= updateUrl %>" id="updateUrl">
-                        <button onclick="copySpecificUrl('updateUrl')" class="btn secondary">Copiar URL</button>
+                        <input type="text" readonly value="<%= appUpdateUrl %>" id="appUpdateUrl">
+                        <button onclick="copySpecificUrl('appUpdateUrl')" class="btn secondary">Copiar</button>
                     </div>
-                    <details style="margin-top: 1rem;">
-                        <summary style="cursor:pointer; color:#1d4ed8;">Ver links individuais (compatibilidade)</summary>
-                        <div style="padding-top:.75rem;">
-                            <p class="text-muted" style="margin: .5rem 0 0;">Configuração:</p>
-                            <div class="url-box" style="margin-bottom: .75rem;">
-                                <input type="text" readonly value="<%= updateConfigUrl %>" id="configUrl">
-                                <button onclick="copySpecificUrl('configUrl')" class="btn secondary">Copiar</button>
-                            </div>
-                            <p class="text-muted" style="margin: .5rem 0 0;">Appupdate / APK:</p>
-                            <div class="url-box" style="margin-bottom: .75rem;">
-                                <input type="text" readonly value="<%= updateAppUpdateUrl %>" id="appUpdateUrl">
-                                <button onclick="copySpecificUrl('appUpdateUrl')" class="btn secondary">Copiar</button>
-                            </div>
-                            <p class="text-muted" style="margin: .5rem 0 0;">Tema:</p>
-                            <div class="url-box" style="margin-bottom: .75rem;">
-                                <input type="text" readonly value="<%= updateThemeUrl %>" id="themeUrl">
-                                <button onclick="copySpecificUrl('themeUrl')" class="btn secondary">Copiar</button>
-                            </div>
-                            <p class="text-muted" style="margin: .5rem 0 0;">SMS:</p>
-                            <div class="url-box" style="margin-bottom: 0;">
-                                <input type="text" readonly value="<%= updateSmsUrl %>" id="smsUrl">
-                                <button onclick="copySpecificUrl('smsUrl')" class="btn secondary">Copiar</button>
-                            </div>
-                        </div>
-                    </details>
+                    <p class="text-muted" style="margin: .5rem 0 0;">Tema:</p>
+                    <div class="url-box" style="margin-bottom: .75rem;">
+                        <input type="text" readonly value="<%= themeUrl %>" id="themeUrl">
+                        <button onclick="copySpecificUrl('themeUrl')" class="btn secondary">Copiar</button>
+                    </div>
+                    <p class="text-muted" style="margin: .5rem 0 0;">SMS:</p>
+                    <div class="url-box" style="margin-bottom: 0;">
+                        <input type="text" readonly value="<%= smsUrl %>" id="smsUrl">
+                        <button onclick="copySpecificUrl('smsUrl')" class="btn secondary">Copiar</button>
+                    </div>
                 </div>
 
                 <div class="overview-status-grid">
@@ -355,6 +340,7 @@
                         <div class="form-group"><label>Imagem do usuário</label><input type="url" v-model="config.Theme.ImgUser"></div>
                         <div class="form-group"><label>Imagem da senha</label><input type="url" v-model="config.Theme.ImgPass"></div>
                         <div class="form-group"><label>Imagem de atualização</label><input type="url" v-model="config.Theme.ImgUpdate"></div>
+                        <div class="form-group"><label>Imagem do router</label><input type="url" v-model="config.Theme.ImgRouter"></div>
                         <div class="form-group"><label>ColorOne</label><input type="text" v-model="config.Theme.ColorOne"></div>
                         <div class="form-group"><label>ColorTwo</label><input type="text" v-model="config.Theme.ColorTwo"></div>
                         <div class="form-group"><label>ColorStarter</label><input type="text" v-model="config.Theme.ColorStarter"></div>
@@ -521,17 +507,6 @@
                             <label>E-mail</label>
                             <input type="email" v-model="profile.email" placeholder="voce@email.com">
                         </div>
-                        <div class="form-group full-width">
-                            <label>UUID de atualização</label>
-                            <div class="url-box">
-                                <input type="text" :value="profile.updateUuid" id="profileUpdateUuid" readonly style="background-color: #f4f5f7; color: #6b7480; cursor: not-allowed;">
-                                <button type="button" class="btn secondary" onclick="copySpecificUrl('profileUpdateUuid')">Copiar</button>
-                            </div>
-                            <small class="text-muted">Use este UUID no aplicativo para resolver todas as atualizações deste painel. Regenerar invalida o UUID anterior.</small>
-                            <div style="margin-top:.65rem;">
-                                <button type="button" class="btn danger small" :disabled="profileSaving" @click="regenerateUpdateUuid">Gerar novo UUID</button>
-                            </div>
-                        </div>
                         <div class="form-group">
                             <label>Senha atual</label>
                             <input type="password" v-model="profile.currentPassword" placeholder="••••••••" autocomplete="current-password">
@@ -596,13 +571,17 @@
                             </div>
                             <div class="form-group grid-col-2">
                                 <div>
+                                    <label>UdpPort</label>
+                                    <input type="text" v-model="config.Servers[modal.index].UdpPort" placeholder="7300">
+                                </div>
+                                <div>
                                     <label>FLAG (URL)</label>
                                     <input type="text" v-model="config.Servers[modal.index].FLAG" placeholder="https://.../bandeira.png">
                                 </div>
-                                <div>
-                                    <label>URL Check User</label>
-                                    <input type="text" v-model="config.Servers[modal.index].CheckUser" placeholder="http://.../check?user={user}">
-                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>URL Check User</label>
+                                <input type="text" v-model="config.Servers[modal.index].CheckUser" placeholder="http://.../check?user={user}">
                             </div>
                             <div class="form-group grid-col-2">
                                 <div>
@@ -709,7 +688,7 @@
                 // Modelo exclusivo do ConnectPlus: somente estas chaves são entregues ao app.
                 const serverDefaults = {
                     Name: '', ColorName: '#ffffff', Description: '', ColorDescription: '#ffffff',
-                    FLAG: '', ServerIP: '', ServerPort: '443', CheckUser: '', USER: '', PASS: '',
+                    UdpPort: '7300', FLAG: '', ServerIP: '', ServerPort: '443', CheckUser: '', USER: '', PASS: '',
                     Payload: '', ProxyIP: '', ProxyPort: '443', SNI: '', Path: '', TLSVersion: 'TLSv1.2',
                     Color: '#0000ff', Info: 'Tlsws'
                 };
@@ -741,11 +720,12 @@
                 initialConfig.Sms.Notes = String(initialConfig.Sms.Notes ?? '');
                 initialConfig.Theme = Object.assign({
                     Version: '1', Update: '', AppName: 'ConnectPlus', ImgFundo: '', ImgLogo: '', ImgBanner: '',
-                    ImgMenu: '', ImgLogs: '', ImgCheck: '', ImgUser: '', ImgPass: '', ColorOne: '#7A333333',
-                    ColorTwo: '#7A333333', ColorStarter: '#7A333333', ColorDialogs: '#84ffffff',
-                    ColorButtons: '#333333', ImgUpdate: ''
+                    ImgMenu: '', ImgLogs: '', ImgCheck: '', ImgUser: '', ImgPass: '', ImgUpdate: '', ImgRouter: '',
+                    ColorOne: '#2196F3', ColorTwo: '#1976D2', ColorStarter: '#4CAF50', ColorDialogs: '#FFFFFF',
+                    ColorButtons: '#333333'
                 }, initialConfig.Theme || {});
                 initialConfig.Theme.AppName = 'ConnectPlus';
+                if (initialConfig.Theme.ImgRouter === undefined) initialConfig.Theme.ImgRouter = '';
 
                 // Delete the fake Layout object if it was accidentally created before
                 if (initialConfig.Layout) delete initialConfig.Layout;
@@ -780,8 +760,6 @@
                     profile: {
                         username: '<%= user.username %>',
                         email: '<%= user.email || "" %>',
-                        updateUuid: '<%= user.updateUuid || "" %>',
-                        updateUrl: '<%= updateUrl %>',
                         createdAt: '<%= user.created_at || "" %>',
                         isAdmin: <%= user.isAdmin ? 'true' : 'false' %>,
                         currentPassword: '',
@@ -844,33 +822,9 @@
                         if (!response.ok) return;
                         this.profile.username = data.username || this.profile.username;
                         this.profile.email = data.email || '';
-                        this.profile.updateUuid = data.updateUuid || this.profile.updateUuid;
-                        this.profile.updateUrl = data.updateUrl || this.profile.updateUrl;
                         this.profile.createdAt = data.created_at || this.profile.createdAt || '';
                         this.profile.isAdmin = !!data.isAdmin;
                     } catch (e) { /* ignore */ }
-                },
-                async regenerateUpdateUuid() {
-                    if (!confirm('Gerar um novo UUID? O UUID anterior deixará de funcionar imediatamente.')) return;
-                    this.profileSaving = true;
-                    this.profileMsg = '';
-                    this.profileError = '';
-                    try {
-                        const response = await fetch('/api/profile/update-uuid/regenerate', {
-                            method: 'POST',
-                            headers: { 'Accept': 'application/json' }
-                        });
-                        const data = await response.json().catch(() => ({}));
-                        if (!response.ok) throw new Error(data.error || 'Falha ao gerar novo UUID');
-                        this.profile.updateUuid = data.updateUuid || '';
-                        this.profile.updateUrl = data.updateUrl || '';
-                        this.profileMsg = '✅ Novo UUID gerado!';
-                        setTimeout(() => { this.profileMsg = ''; }, 3500);
-                    } catch (err) {
-                        this.profileError = err.message || 'Erro ao gerar novo UUID';
-                    } finally {
-                        this.profileSaving = false;
-                    }
                 },
                 async saveProfile() {
                     this.profileSaving = true;
@@ -1230,6 +1184,7 @@
                         ColorName: "#ffffff",
                         Description: "",
                         ColorDescription: "#ffffff",
+                        UdpPort: "7300",
                         FLAG: "",
                         ServerIP: "",
                         ServerPort: "443",
