@@ -124,13 +124,12 @@ function parseUserConfig(user) {
     }
 }
 
-function buildSmsPayload(user) {
+function buildSmsPayload(req, username, user, publicPrefix = '') {
     const stored = parseUserConfig(user);
     const sms = stored.Sms || {};
     return {
         Version: String(sms.Version ?? '1'),
-        Update: String(sms.Update ?? ''),
-        Notes: String(sms.Notes ?? '')
+        Update: buildPublicResourceUrl(req, username, 'sms', publicPrefix)
     };
 }
 
@@ -139,30 +138,31 @@ function buildPublicResourceUrl(req, identifier, resource, publicPrefix = '') {
     return `${requestBaseUrl(req)}${prefix}/${encodeURIComponent(identifier)}/${resource}`;
 }
 
-function buildUpdateEntryUrl(req, uuid) {
-    return `${requestBaseUrl(req)}/u/${encodeURIComponent(uuid)}`;
-}
-
 function buildUserConfig(req, username, user, publicPrefix = '') {
     const stored = parseUserConfig(user);
     const configUrl = buildPublicResourceUrl(req, username, 'config', publicPrefix);
-    const serverKeys = ['Name', 'ColorName', 'Description', 'ColorDescription', 'FLAG', 'ServerIP', 'ServerPort', 'CheckUser', 'USER', 'PASS', 'Payload', 'ProxyIP', 'ProxyPort', 'SNI', 'Path', 'Color', 'Info'];
+    const serverKeys = [
+        'Name', 'ColorName', 'Description', 'ColorDescription', 'UdpPort',
+        'FLAG', 'ServerIP', 'ServerPort', 'CheckUser', 'USER', 'PASS',
+        'Payload', 'ProxyIP', 'ProxyPort', 'SNI', 'Path', 'Color', 'Info'
+    ];
     const servers = Array.isArray(stored.Servers) ? stored.Servers.map((server) => {
         const clean = {};
         serverKeys.forEach((key) => {
             if (server[key] !== undefined) clean[key] = server[key];
         });
+        if (clean.UdpPort === undefined || clean.UdpPort === '') {
+            clean.UdpPort = String(stored.UdpPort ?? '7300');
+        }
         if (!['Ssl', 'Direct', 'Proxy', 'Tlsws', 'XHTTP'].includes(clean.Info)) clean.Info = 'Tlsws';
         return clean;
     }) : [];
 
-    // O endpoint pÃºblico segue exclusivamente o modelo ConnectPlus enviado.
+    // Formato novo ConnectPlus: Version, Update, Contato, Servers (UdpPort por servidor)
     return {
         Version: String(stored.Version ?? 1),
         Update: configUrl,
-        UdpPort: String(stored.UdpPort ?? '7300'),
         Contato: String(stored.Contato ?? ''),
-        Site: String(stored.Site ?? ''),
         Servers: servers
     };
 }
@@ -175,7 +175,7 @@ function buildAppUpdate(req, username, user, publicPrefix = '') {
     return {
         Version: String(stored.AppVersion ?? stored.Version ?? 1),
         VersionName: String(stored.VersionName ?? stored.Version ?? '1'),
-        Update: buildPublicResourceUrl(req, username, 'config', publicPrefix),
+        Update: buildPublicResourceUrl(req, username, 'appupdate', publicPrefix),
         Actualization: actualization,
         UpdateApk: stored.UpdateApk || ''
     };
@@ -215,70 +215,26 @@ function saveUser(username, data) {
     fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
-const UPDATE_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function isValidUpdateUuid(value) {
-    return UPDATE_UUID_PATTERN.test(String(value || '').trim());
-}
-
-function ensureUserUpdateUuid(user) {
-    if (!user) return null;
-    if (isValidUpdateUuid(user.updateUuid)) return String(user.updateUuid).toLowerCase();
-    user.updateUuid = crypto.randomUUID();
-    saveUser(user.username, user);
-    return user.updateUuid;
-}
-
-function findUserByUpdateUuid(value) {
-    const target = String(value || '').trim().toLowerCase();
-    if (!isValidUpdateUuid(target)) return null;
-    return listUsers().find((user) => String(user.updateUuid || '').toLowerCase() === target) || null;
-}
-
 function buildThemePayload(req, username, user, publicPrefix = '') {
     const config = parseUserConfig(user);
     const savedTheme = (config.Theme && typeof config.Theme === 'object') ? config.Theme : {};
     return {
         Version: String(savedTheme.Version ?? config.Version ?? 1),
         Update: buildPublicResourceUrl(req, username, 'theme', publicPrefix),
-        AppName: 'ConnectPlus',
         ImgFundo: savedTheme.ImgFundo || '',
         ImgLogo: savedTheme.ImgLogo || '',
-        ImgBanner: savedTheme.ImgBanner || '',
         ImgMenu: savedTheme.ImgMenu || '',
         ImgLogs: savedTheme.ImgLogs || '',
         ImgCheck: savedTheme.ImgCheck || '',
         ImgUser: savedTheme.ImgUser || '',
         ImgPass: savedTheme.ImgPass || '',
-        ColorOne: savedTheme.ColorOne || '',
-        ColorTwo: savedTheme.ColorTwo || '',
-        ColorStarter: savedTheme.ColorStarter || '',
-        ColorDialogs: savedTheme.ColorDialogs || '',
-        ColorButtons: savedTheme.ColorButtons || '',
-        ImgUpdate: savedTheme.ImgUpdate || ''
-    };
-}
-
-function buildUpdateManifest(req, uuid, user) {
-    const config = parseUserConfig(user);
-    const resources = {
-        config: buildPublicResourceUrl(req, uuid, 'config', '/u'),
-        appupdate: buildPublicResourceUrl(req, uuid, 'appupdate', '/u'),
-        sms: buildPublicResourceUrl(req, uuid, 'sms', '/u'),
-        theme: buildPublicResourceUrl(req, uuid, 'theme', '/u')
-    };
-    return {
-        uuid,
-        version: String(config.Version ?? 1),
-        Update: resources.config,
-        AppUpdate: resources.appupdate,
-        SmsUpdate: resources.sms,
-        ThemeUpdate: resources.theme,
-        config: resources.config,
-        appupdate: resources.appupdate,
-        sms: resources.sms,
-        theme: resources.theme,
-        resources
+        ImgUpdate: savedTheme.ImgUpdate || '',
+        ImgRouter: savedTheme.ImgRouter || '',
+        AppName: 'ConnectPlus',
+        ColorOne: savedTheme.ColorOne || '#2196F3',
+        ColorTwo: savedTheme.ColorTwo || '#1976D2',
+        ColorStarter: savedTheme.ColorStarter || '#4CAF50',
+        ColorDialogs: savedTheme.ColorDialogs || '#FFFFFF'
     };
 }
 
@@ -532,12 +488,13 @@ const DEFAULT_CONFIG = {
         "ImgCheck": "https://telegra.ph/file/12ab1b8c54f671f72bc73.png",
         "ImgUser": "https://telegra.ph/file/51cfbf308fa6a293d6f7b.png",
         "ImgPass": "https://telegra.ph/file/0aae4b5cc75034f04611d.png",
-        "ColorOne": "#7A333333",
-        "ColorTwo": "#7A333333",
-        "ColorStarter": "#7A333333",
-        "ColorDialogs": "#84ffffff",
-        "ColorButtons": "#333333",
-        "ImgUpdate": "https://i.imgur.com/CJFEvDW.png"
+        "ImgUpdate": "https://i.imgur.com/CJFEvDW.png",
+        "ImgRouter": "",
+        "ColorOne": "#2196F3",
+        "ColorTwo": "#1976D2",
+        "ColorStarter": "#4CAF50",
+        "ColorDialogs": "#FFFFFF",
+        "ColorButtons": "#333333"
     },
     "Servers": []
 };
@@ -746,7 +703,6 @@ app.post('/register', async (req, res) => {
             email,
             password: hash,
             config_json: configJsonStr,
-            updateUuid: crypto.randomUUID(),
             created_at: new Date().toISOString(),
             isAdmin: false
         });
@@ -760,12 +716,9 @@ app.post('/register', async (req, res) => {
 app.get('/api/profile', requireAuth, (req, res) => {
     const user = getUser(req.user.username);
     if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
-    const updateUuid = ensureUserUpdateUuid(user);
     res.json({
         username: user.username,
         email: user.email || '',
-        updateUuid,
-        updateUrl: buildUpdateEntryUrl(req, updateUuid),
         created_at: user.created_at || null,
         plan: user.plan || 'trial',
         expiresAt: user.expiresAt || null,
@@ -809,25 +762,10 @@ app.post('/api/profile', requireAuth, async (req, res) => {
     }
 
     saveUser(user.username, user);
-    const updateUuid = ensureUserUpdateUuid(user);
     res.json({
         ok: true,
         username: user.username,
-        email: user.email || '',
-        updateUuid,
-        updateUrl: buildUpdateEntryUrl(req, updateUuid)
-    });
-});
-
-app.post('/api/profile/update-uuid/regenerate', requireAuth, (req, res) => {
-    const user = getUser(req.user.username);
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
-    user.updateUuid = crypto.randomUUID();
-    saveUser(user.username, user);
-    res.json({
-        ok: true,
-        updateUuid: user.updateUuid,
-        updateUrl: buildUpdateEntryUrl(req, user.updateUuid)
+        email: user.email || ''
     });
 });
 
@@ -840,7 +778,6 @@ app.get('/logout', (req, res) => {
 app.get('/dashboard', requireAuth, requireActivePlan, (req, res) => {
     const user = req.userFull || getUser(req.user.username);
     if (!user) return res.redirect('/login');
-    const updateUuid = ensureUserUpdateUuid(user);
 
     // Preserve the external port (for example :2000) in all generated URLs.
     const hostUrl = requestBaseUrl(req);
@@ -851,7 +788,6 @@ app.get('/dashboard', requireAuth, requireActivePlan, (req, res) => {
         user: {
             ...req.user,
             email: user.email || '',
-            updateUuid,
             created_at: user.created_at || null,
             isAdmin: isAdminUser(user)
         },
@@ -860,11 +796,6 @@ app.get('/dashboard', requireAuth, requireActivePlan, (req, res) => {
         appUpdateUrl: `${hostUrl}/${encodeURIComponent(user.username)}/appupdate`,
         smsUrl: `${hostUrl}/${encodeURIComponent(user.username)}/sms`,
         themeUrl: `${hostUrl}/${encodeURIComponent(user.username)}/theme`,
-        updateUrl: buildUpdateEntryUrl(req, updateUuid),
-        updateConfigUrl: buildPublicResourceUrl(req, updateUuid, 'config', '/u'),
-        updateAppUpdateUrl: buildPublicResourceUrl(req, updateUuid, 'appupdate', '/u'),
-        updateSmsUrl: buildPublicResourceUrl(req, updateUuid, 'sms', '/u'),
-        updateThemeUrl: buildPublicResourceUrl(req, updateUuid, 'theme', '/u'),
         apkUrl: hasApk ? `${hostUrl}${apkRelative}` : '',
         hasApk
     });
@@ -1333,42 +1264,7 @@ function sendDynamicJson(res, payload) {
     return res.type('application/json').send(payload);
 }
 
-// Resolvedor unificado: o aplicativo precisa conhecer apenas o UUID.
-app.get('/u/:uuid', (req, res) => {
-    const user = findUserByUpdateUuid(req.params.uuid);
-    if (!user) return res.status(404).json({ error: 'UUID de atualização não encontrado' });
-    const uuid = ensureUserUpdateUuid(user);
-    sendDynamicJson(res, buildUpdateManifest(req, uuid, user));
-});
-
-app.get('/u/:uuid/config', (req, res) => {
-    const user = findUserByUpdateUuid(req.params.uuid);
-    if (!user) return res.status(404).send('Not Found');
-    const uuid = ensureUserUpdateUuid(user);
-    sendDynamicJson(res, buildUserConfig(req, uuid, user, '/u'));
-});
-
-app.get('/u/:uuid/appupdate', (req, res) => {
-    const user = findUserByUpdateUuid(req.params.uuid);
-    if (!user) return res.status(404).send('Not Found');
-    const uuid = ensureUserUpdateUuid(user);
-    sendDynamicJson(res, buildAppUpdate(req, uuid, user, '/u'));
-});
-
-app.get('/u/:uuid/sms', (req, res) => {
-    const user = findUserByUpdateUuid(req.params.uuid);
-    if (!user) return res.status(404).send('Not Found');
-    sendDynamicJson(res, buildSmsPayload(user));
-});
-
-app.get('/u/:uuid/theme', (req, res) => {
-    const user = findUserByUpdateUuid(req.params.uuid);
-    if (!user) return res.status(404).send('Not Found');
-    const uuid = ensureUserUpdateUuid(user);
-    sendDynamicJson(res, buildThemePayload(req, uuid, user, '/u'));
-});
-
-// Endpoints pÃºblicos no formato esperado pelo aplicativo (legado).
+// Endpoints pÃºblicos no formato esperado pelo aplicativo (por username).
 app.get('/:username/config', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
@@ -1387,7 +1283,7 @@ app.get('/:username/sms', (req, res) => {
     const username = req.params.username;
     const user = getUser(username);
     if (!user) return res.status(404).send('Not Found');
-    sendDynamicJson(res, buildSmsPayload(user));
+    sendDynamicJson(res, buildSmsPayload(req, username, user));
 });
 
 app.get('/:username/theme', (req, res) => {
